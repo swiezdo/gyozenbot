@@ -2,7 +2,7 @@
 import sys
 import os
 import logging
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
 
@@ -91,12 +91,22 @@ def _format_profile(profile_data: dict) -> str:
     # Платформы
     platforms = profile_data.get('platforms', [])
     if platforms:
-        text += f"💻 <b>Платформы:</b> {', '.join(platforms)}\n"
+        if len(platforms) == 1:
+            text += f"💻 <b>Платформы:</b> {platforms[0]}\n"
+        else:
+            text += f"💻 <b>Платформы:</b>\n"
+            for platform in platforms:
+                text += f"• {platform}\n"
     
     # Режимы игры
     modes = profile_data.get('modes', [])
     if modes:
-        text += f"🎯 <b>Режимы:</b> {', '.join(modes)}\n"
+        if len(modes) == 1:
+            text += f"🎯 <b>Режимы:</b> {modes[0]}\n"
+        else:
+            text += f"🎯 <b>Режимы:</b>\n"
+            for mode in modes:
+                text += f"• {mode}\n"
     
     # Цели
     goals = profile_data.get('goals', [])
@@ -106,27 +116,27 @@ def _format_profile(profile_data: dict) -> str:
     # Сложности
     difficulties = profile_data.get('difficulties', [])
     if difficulties:
-        text += f"⚡ <b>Сложности:</b> {', '.join(difficulties)}\n"
+        if len(difficulties) == 1:
+            text += f"⚡ <b>Сложности:</b> {difficulties[0]}\n"
+        else:
+            text += f"⚡ <b>Сложности:</b>\n"
+            for difficulty in difficulties:
+                text += f"• {difficulty}\n"
     
     # Трофеи
     trophies = profile_data.get('trophies', [])
     if trophies:
-        text += f"🏆 <b>Трофеи:</b> {', '.join(trophies)}\n"
+        text += f"🏆 <b>Трофеи:</b>\n"
+        for trophy in trophies:
+            text += f"• {trophy}\n"
     
     return text
 
-@router.message()
+@router.message(F.text == "!п")
 async def profile_command(message: Message):
     """
     Обработчик команды !п для просмотра профиля пользователя.
     """
-    logger.info(f"Получено сообщение: '{message.text}' от пользователя {message.from_user.id} в чате {message.chat.id}")
-    
-    # Проверяем, что это команда !п
-    if not message.text or message.text.strip() != "!п":
-        logger.debug(f"Сообщение '{message.text}' не является командой !п, пропускаем")
-        return
-    
     logger.info(f"Обнаружена команда !п от пользователя {message.from_user.id}")
     
     # Проверяем контекст

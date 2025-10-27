@@ -87,19 +87,25 @@ async def fetch_build_data(build_id: int) -> tuple:
     Returns:
         tuple: (build_data: dict|None, error_message: str|None)
     """
+    logger.info(f"Запрашиваем билд {build_id} из API")
     try:
         async with aiohttp.ClientSession() as session:
             url = f"{API_BASE_URL}/api/builds.get/{build_id}"
+            logger.info(f"URL запроса: {url}")
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                logger.info(f"Статус ответа: {response.status}")
                 if response.status == 404:
+                    logger.warning(f"Билд {build_id} не найден")
                     return None, "Билд не найден"
                 elif response.status == 403:
                     data = await response.json()
                     if data.get('is_private'):
+                        logger.warning(f"Билд {build_id} приватный")
                         return None, "Билд найден, но он приватный"
                     return None, "Доступ к билду запрещен"
                 elif response.status == 200:
                     data = await response.json()
+                    logger.info(f"Получены данные билда: {data}")
                     return data.get('build'), None
                 else:
                     logger.error(f"Неожиданный статус API: {response.status}")

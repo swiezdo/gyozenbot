@@ -77,8 +77,8 @@ OPENAI_API_KEY   = os.getenv("OPENAI_API_KEY", "")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 
 # --- Мини-приложение ----------------------------------------
-MINI_APP_URL = os.getenv("MINI_APP_URL", "https://yourusername.github.io/tsushimaru_app/docs/index.html")
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+MINI_APP_URL = os.getenv("MINI_APP_URL", "https://swiezdo.github.io/tsushimaru_app/")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://tsushimaru.com")
 
 # Группа для трофеев
 TROPHY_GROUP_CHAT_ID = os.getenv("TROPHY_GROUP_CHAT_ID", "-1002348168326")
