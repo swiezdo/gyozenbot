@@ -164,19 +164,19 @@ async def send_build_media_group(message: Message, build_data: dict):
             parse_mode="HTML"
         )
 
-async def get_trophy_and_user_info(user_id: int, trophy_id: str) -> tuple:
+async def get_trophy_and_user_info(user_id: int, trophy_name: str) -> tuple:
     """Получает название трофея и PSN ID пользователя"""
-    trophy_name = trophy_id
+    display_name = trophy_name
     psn_id = str(user_id)
     
     try:
         # Получаем данные трофея
         async with aiohttp.ClientSession() as session:
-            trophy_url = f"{API_BASE_URL}/api/trophy_info/{trophy_id}"
+            trophy_url = f"{API_BASE_URL}/api/trophy_info/{trophy_name}"
             async with session.get(trophy_url) as trophy_response:
                 if trophy_response.status == 200:
                     trophy_data = await trophy_response.json()
-                    trophy_name = f"{trophy_data.get('name', trophy_id)} {trophy_data.get('emoji', '')}".strip()
+                    display_name = f"{trophy_data.get('name', trophy_name)} {trophy_data.get('emoji', '')}".strip()
             
             # Получаем PSN ID пользователя
             user_url = f"{API_BASE_URL}/api/user_info/{user_id}"
@@ -187,7 +187,7 @@ async def get_trophy_and_user_info(user_id: int, trophy_id: str) -> tuple:
     except Exception as e:
         logger.error(f"Ошибка получения данных: {e}")
     
-    return trophy_name, psn_id
+    return display_name, psn_id
 
 @router.callback_query(F.data.startswith("trophy_approve:"))
 async def handle_trophy_approve(callback: CallbackQuery):
@@ -199,16 +199,16 @@ async def handle_trophy_approve(callback: CallbackQuery):
     
     if len(parts) == 3:
         user_id = int(parts[1])
-        trophy_id = parts[2]
+        trophy_name = parts[2]
         
         # Получаем данные трофея и пользователя
-        trophy_name, psn_id = await get_trophy_and_user_info(user_id, trophy_id)
+        trophy_display_name, psn_id = await get_trophy_and_user_info(user_id, trophy_name)
         
-        success = await approve_trophy(user_id, trophy_id)
+        success = await approve_trophy(user_id, trophy_name)
         
         if success:
             await callback.message.edit_text(
-                f"✅ Заявка одобрена\n\nТрофей: {trophy_name}\nПользователь: {psn_id}"
+                f"✅ Заявка одобрена\n\nТрофей: {trophy_display_name}\nПользователь: {psn_id}"
             )
         else:
             await callback.message.edit_text(
@@ -225,36 +225,36 @@ async def handle_trophy_reject(callback: CallbackQuery):
     
     if len(parts) == 3:
         user_id = int(parts[1])
-        trophy_id = parts[2]
+        trophy_name = parts[2]
         
         # Получаем данные трофея и пользователя
-        trophy_name, psn_id = await get_trophy_and_user_info(user_id, trophy_id)
+        trophy_display_name, psn_id = await get_trophy_and_user_info(user_id, trophy_name)
         
-        success = await reject_trophy(user_id, trophy_id)
+        success = await reject_trophy(user_id, trophy_name)
         
         if success:
             await callback.message.edit_text(
-                f"❌ Заявка отклонена\n\nТрофей: {trophy_name}\nПользователь: {psn_id}"
+                f"❌ Заявка отклонена\n\nТрофей: {trophy_display_name}\nПользователь: {psn_id}"
             )
         else:
             await callback.message.edit_text(
                 f"❌ Ошибка при отклонении трофея"
             )
 
-async def approve_trophy(user_id: int, trophy_id: str) -> bool:
+async def approve_trophy(user_id: int, trophy_name: str) -> bool:
     """Одобряет трофей через API"""
     try:
         async with aiohttp.ClientSession() as session:
             url = f"{API_BASE_URL}/api/trophies.approve"
             data = {
                 "user_id": user_id,
-                "trophy_id": trophy_id
+                "trophy_name": trophy_name
             }
             
             async with session.post(url, data=data) as response:
                 if response.status == 200:
                     result = await response.json()
-                    logger.info(f"Трофей {trophy_id} одобрен для пользователя {user_id}: {result}")
+                    logger.info(f"Трофей {trophy_name} одобрен для пользователя {user_id}: {result}")
                     return True
                 else:
                     logger.error(f"Ошибка одобрения трофея: {response.status}")
@@ -263,20 +263,20 @@ async def approve_trophy(user_id: int, trophy_id: str) -> bool:
         logger.error(f"Ошибка при одобрении трофея: {e}")
         return False
 
-async def reject_trophy(user_id: int, trophy_id: str) -> bool:
+async def reject_trophy(user_id: int, trophy_name: str) -> bool:
     """Отклоняет трофей через API"""
     try:
         async with aiohttp.ClientSession() as session:
             url = f"{API_BASE_URL}/api/trophies.reject"
             data = {
                 "user_id": user_id,
-                "trophy_id": trophy_id
+                "trophy_name": trophy_name
             }
             
             async with session.post(url, data=data) as response:
                 if response.status == 200:
                     result = await response.json()
-                    logger.info(f"Трофей {trophy_id} отклонен для пользователя {user_id}: {result}")
+                    logger.info(f"Трофей {trophy_name} отклонен для пользователя {user_id}: {result}")
                     return True
                 else:
                     logger.error(f"Ошибка отклонения трофея: {response.status}")
