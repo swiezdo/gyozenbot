@@ -11,7 +11,7 @@ import json
 import logging
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, InputMediaPhoto
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.enums import ChatMemberStatus
 
@@ -48,6 +48,121 @@ async def start_command(message: Message):
     ))
     
     await message.answer(welcome_text, reply_markup=builder.as_markup())
+
+@router.message(Command("build", "билд"))
+async def build_command(message: Message):
+    """Обработчик команды /build <ID> или /билд <ID>"""
+    args = message.text.split()
+    
+    # Проверка наличия аргумента
+    if len(args) < 2:
+        await message.reply(
+            "❌ <b>Неверный формат команды</b>\n\n"
+            "Использование: /build <ID>\n"
+            "Пример: /build 12",
+            parse_mode="HTML"
+        )
+        return
+    
+    # Проверка, что ID - число
+    try:
+        build_id = int(args[1])
+    except ValueError:
+        await message.reply("❌ ID билда должен быть числом")
+        return
+    
+    # Получаем данные билда
+    build_data, error_message = await fetch_build_data(build_id)
+    
+    if error_message:
+        await message.reply(f"❌ {error_message}")
+        return
+    
+    # Отправляем медиагруппу
+    await send_build_media_group(message, build_data)
+
+async def fetch_build_data(build_id: int) -> tuple:
+    """Получает данные билда по ID из API
+    
+    Returns:
+        tuple: (build_data: dict|None, error_message: str|None)
+    """
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f"{API_BASE_URL}/api/builds.get/{build_id}"
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status == 404:
+                    return None, "Билд не найден"
+                elif response.status == 403:
+                    data = await response.json()
+                    if data.get('is_private'):
+                        return None, "Билд найден, но он приватный"
+                    return None, "Доступ к билду запрещен"
+                elif response.status == 200:
+                    data = await response.json()
+                    return data.get('build'), None
+                else:
+                    logger.error(f"Неожиданный статус API: {response.status}")
+                    return None, f"Ошибка сервера (код {response.status})"
+    except asyncio.TimeoutError:
+        logger.error(f"Таймаут при запросе билда {build_id}")
+        return None, "Превышено время ожидания ответа от сервера"
+    except aiohttp.ClientError as e:
+        logger.error(f"Ошибка сети при запросе билда {build_id}: {e}")
+        return None, "Ошибка подключения к серверу"
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка при запросе билда {build_id}: {e}")
+        return None, "Произошла непредвиденная ошибка"
+
+async def send_build_media_group(message: Message, build_data: dict):
+    """Отправляет билд как медиагруппу с 2 фото и информацией"""
+    
+    # Формируем текст с информацией о билде
+    tags_text = ', '.join(build_data.get('tags', [])) if build_data.get('tags') else '—'
+    description_text = build_data.get('description', 'Описание отсутствует')
+    
+    caption = f"""🛠️ <b>{build_data['name']}</b>
+
+👤 <b>Автор:</b> {build_data.get('author', 'Неизвестно')}
+⚔️ <b>Класс:</b> {build_data.get('class', 'Не указан')}
+🏷️ <b>Теги:</b> {tags_text}
+
+📝 <b>Описание:</b>
+{description_text}"""
+    
+    media_group = []
+    
+    # Первая картинка с описанием
+    if build_data.get('photo_1'):
+        photo1_url = f"{API_BASE_URL}{build_data['photo_1']}"
+        media_group.append(InputMediaPhoto(
+            media=photo1_url,
+            caption=caption,
+            parse_mode="HTML"
+        ))
+    
+    # Вторая картинка (без текста)
+    if build_data.get('photo_2'):
+        photo2_url = f"{API_BASE_URL}{build_data['photo_2']}"
+        media_group.append(InputMediaPhoto(media=photo2_url))
+    
+    # Отправка медиагруппы или ошибки
+    if media_group:
+        try:
+            await message.answer_media_group(media=media_group)
+        except Exception as e:
+            logger.error(f"Ошибка отправки медиагруппы: {e}")
+            await message.reply(
+                f"❌ Не удалось загрузить изображения билда\n\n"
+                f"Попробуйте позже или откройте билд в приложении"
+            )
+    else:
+        # Если нет фото, отправляем только текст
+        await message.reply(
+            f"{caption}\n\n"
+            f"⚠️ <i>У этого билда нет изображений</i>",
+            parse_mode="HTML"
+        )
 
 async def get_trophy_and_user_info(user_id: int, trophy_id: str) -> tuple:
     """Получает название трофея и PSN ID пользователя"""

@@ -61,7 +61,7 @@ SYSTEM_PROMPT      = os.getenv("SYSTEM_PROMPT", "You are a helpful assistant for
 # Подставь свои реальные ID ниже:
 OWNER_ID = 1053983438             # ID владельца
 GROUP_ID = -1002365374672         # ID группы
-TOPIC_ID = 847                    # ID темы, где отвечает ИИ
+TOPIC_ID = 2673                   # ID темы legends (где работает команда !п)
 
 # (Если вдруг захочешь брать из env, можно раскомментить):
 # OWNER_ID = _as_int_env("OWNER_ID", 1053983438)
@@ -83,6 +83,11 @@ API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 # Группа для трофеев
 TROPHY_GROUP_CHAT_ID = os.getenv("TROPHY_GROUP_CHAT_ID", "-1002348168326")
 TROPHY_GROUP_TOPIC_ID = os.getenv("TROPHY_GROUP_TOPIC_ID", "5675")
+
+# --- Константы для тем -------------------------------------
+# ID первого сообщения темы "legends" - если ответ на это сообщение, 
+# то это обычное сообщение в теме, а не реальный ответ
+LEGENDS_TOPIC_FIRST_MESSAGE = 2673
 
 # --- Валидация конфигурации ----------------------------------
 # Для текста:

@@ -5,7 +5,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from config import BOT_TOKEN
-from handlers import gyozen, waves, miniapp
+from handlers import gyozen, waves, miniapp, profile
 
 async def main():
     logging.basicConfig(
@@ -20,6 +20,7 @@ async def main():
     dp = Dispatcher()
 
     dp.include_routers(
+        profile.router,
         miniapp.router,
         waves.router,
         gyozen.router
