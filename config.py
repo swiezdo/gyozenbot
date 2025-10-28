@@ -61,7 +61,7 @@ SYSTEM_PROMPT      = os.getenv("SYSTEM_PROMPT", "You are a helpful assistant for
 # Подставь свои реальные ID ниже:
 OWNER_ID = 1053983438             # ID владельца
 GROUP_ID = -1002365374672         # ID группы
-TOPIC_ID = 2673                   # ID темы legends (где работает команда !п)
+GYOZEN_TOPIC_ID = 847              # ID темы для гёдзена (ИИ)
 
 # (Если вдруг захочешь брать из env, можно раскомментить):
 # OWNER_ID = _as_int_env("OWNER_ID", 1053983438)

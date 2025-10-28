@@ -10,7 +10,7 @@ from aiogram.filters import Command
 sys.path.append('/root/miniapp_api')
 from db import get_user
 
-from config import GROUP_ID, TOPIC_ID, LEGENDS_TOPIC_FIRST_MESSAGE
+from config import GROUP_ID, LEGENDS_TOPIC_FIRST_MESSAGE
 
 router = Router()
 
@@ -123,12 +123,14 @@ def _format_profile(profile_data: dict) -> str:
             for difficulty in difficulties:
                 text += f"• {difficulty}\n"
     
-    # Трофеи
-    trophies = profile_data.get('trophies', [])
-    if trophies:
+    # Трофеи - упрощенная версия
+    trophies = profile_data.get('trophies', '')
+    if trophies and trophies.strip():
         text += f"🏆 <b>Трофеи:</b>\n"
-        for trophy in trophies:
-            text += f"• {trophy}\n"
+        # Парсим строку через запятую и отображаем
+        trophy_list = [t.strip() for t in trophies.split(',') if t.strip()]
+        for trophy_name in trophy_list:
+            text += f"• {trophy_name}\n"
     
     return text
 

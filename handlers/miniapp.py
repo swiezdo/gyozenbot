@@ -170,19 +170,19 @@ async def send_build_media_group(message: Message, build_data: dict):
             parse_mode="HTML"
         )
 
-async def get_trophy_and_user_info(user_id: int, trophy_name: str) -> tuple:
+async def get_trophy_and_user_info(user_id: int, trophy_id: str) -> tuple:
     """Получает название трофея и PSN ID пользователя"""
-    display_name = trophy_name
+    display_name = trophy_id
     psn_id = str(user_id)
     
     try:
-        # Получаем данные трофея
+        # Получаем данные трофея по trophy_id из нового API
         async with aiohttp.ClientSession() as session:
-            trophy_url = f"{API_BASE_URL}/api/trophy_info/{trophy_name}"
+            trophy_url = f"{API_BASE_URL}/api/trophies.getById/{trophy_id}"
             async with session.get(trophy_url) as trophy_response:
                 if trophy_response.status == 200:
                     trophy_data = await trophy_response.json()
-                    display_name = f"{trophy_data.get('name', trophy_name)} {trophy_data.get('emoji', '')}".strip()
+                    display_name = trophy_data.get('trophy_name', trophy_id)
             
             # Получаем PSN ID пользователя
             user_url = f"{API_BASE_URL}/api/user_info/{user_id}"
@@ -205,10 +205,13 @@ async def handle_trophy_approve(callback: CallbackQuery):
     
     if len(parts) == 3:
         user_id = int(parts[1])
-        trophy_name = parts[2]
+        trophy_id = parts[2]
         
         # Получаем данные трофея и пользователя
-        trophy_display_name, psn_id = await get_trophy_and_user_info(user_id, trophy_name)
+        trophy_display_name, psn_id = await get_trophy_and_user_info(user_id, trophy_id)
+        
+        # Преобразуем trophy_id в trophy_name для API
+        trophy_name = trophy_display_name
         
         success = await approve_trophy(user_id, trophy_name)
         
@@ -231,10 +234,13 @@ async def handle_trophy_reject(callback: CallbackQuery):
     
     if len(parts) == 3:
         user_id = int(parts[1])
-        trophy_name = parts[2]
+        trophy_id = parts[2]
         
         # Получаем данные трофея и пользователя
-        trophy_display_name, psn_id = await get_trophy_and_user_info(user_id, trophy_name)
+        trophy_display_name, psn_id = await get_trophy_and_user_info(user_id, trophy_id)
+        
+        # Преобразуем trophy_id в trophy_name для API
+        trophy_name = trophy_display_name
         
         success = await reject_trophy(user_id, trophy_name)
         

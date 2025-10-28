@@ -7,7 +7,7 @@ from aiogram.types import Message
 from waiting_phrases import WAITING_PHRASES
 from ai_client import get_response
 from image_generator import generate_image
-from config import GROUP_ID, TOPIC_ID, OWNER_ID
+from config import GROUP_ID, GYOZEN_TOPIC_ID, OWNER_ID
 
 router = Router()
 
@@ -25,20 +25,29 @@ def _is_allowed_context(m: Message) -> bool:
     if m.chat.type in ("group", "supergroup"):
         if m.chat.id != GROUP_ID:
             return False
-        return bool(m.is_topic_message and m.message_thread_id == TOPIC_ID)
+        return bool(m.is_topic_message and m.message_thread_id == GYOZEN_TOPIC_ID)
     return False
 
 @router.message()
 async def gyozen_entrypoint(message: Message):
     text = (message.text or "").strip()
+    print(f"DEBUG: Получено сообщение для гёдзена: '{text}' от {message.from_user.id}")
+    
     if not text:
+        print("DEBUG: Пустое сообщение, пропускаем")
         return
     if not _is_recent(message.date.timestamp()):
+        print("DEBUG: Сообщение не свежее, пропускаем")
         return
     if not _is_allowed_context(message):
+        print(f"DEBUG: Контекст не разрешен - чат: {message.chat.id}, тип: {message.chat.type}, тема: {message.message_thread_id}")
+        print(f"DEBUG: Ожидается GROUP_ID: {GROUP_ID}, GYOZEN_TOPIC_ID: {GYOZEN_TOPIC_ID}")
         return
     if not PATTERN.search(text):
+        print("DEBUG: Паттерн 'гёдзен' не найден, пропускаем")
         return
+    
+    print("DEBUG: Обрабатываем сообщение гёдзена")
 
     # Ветка "нарисуй ..."
     m = re.search(r"г[ёе]д[зс][еэ]н.*нарисуй(.*)$", text, re.IGNORECASE | re.DOTALL)

@@ -23,7 +23,7 @@ async def main():
         profile.router,
         miniapp.router,
         waves.router,
-        gyozen.router
+        gyozen.router,
     )
 
     await dp.start_polling(bot)
