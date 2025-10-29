@@ -38,10 +38,10 @@ else:
     _raw_base = _mini_app_url
 
 CLASS_ICONS = {
-    'Самурай': f'{_raw_base}/docs/assets/icons/samurai.svg',
-    'Охотник': f'{_raw_base}/docs/assets/icons/hunter.svg',
-    'Убийца': f'{_raw_base}/docs/assets/icons/assassin.svg',
-    'Ронин': f'{_raw_base}/docs/assets/icons/ronin.svg'
+    'Самурай': f'{_raw_base}/docs/assets/icons/samurai.png',
+    'Охотник': f'{_raw_base}/docs/assets/icons/hunter.png',
+    'Убийца': f'{_raw_base}/docs/assets/icons/assassin.png',
+    'Ронин': f'{_raw_base}/docs/assets/icons/ronin.png'
 }
 
 async def search_builds(query: str, limit: int = 10) -> list:
@@ -105,8 +105,8 @@ async def inline_query_handler(inline_query: InlineQuery):
         build_class = build.get('class', 'Самурай')
         class_icon_url = CLASS_ICONS.get(build_class, CLASS_ICONS['Самурай'])
         
-        # Формируем title: "Класс: Название"
-        title = f"{build_class}: {build['name']}"
+        # Формируем title: "ID: Название"
+        title = f"{build['build_id']}: {build['name']}"
         
         # Формируем description
         description_lines = []
@@ -132,16 +132,8 @@ async def inline_query_handler(inline_query: InlineQuery):
         # Используем команду /билд в input_message_content
         # Сообщение отправится в тот чат, откуда был сделан inline query
         # Затем существующий обработчик команды /билд обработает его и отправит медиагруппу
-        # Примечание: thumbnail_url временно убран, так как Telegram не поддерживает SVG
-        # Можно использовать фото билда как миниатюру, если оно есть
-        thumbnail_url = None
-        if build.get('photo_1'):
-            # Используем первое фото билда как миниатюру
-            photo_url = build['photo_1']
-            if not photo_url.startswith('http'):
-                thumbnail_url = f"{API_BASE_URL}{photo_url}"
-            else:
-                thumbnail_url = photo_url
+        # Миниатюра: используем PNG-иконку класса (SVG не поддерживается Telegram)
+        thumbnail_url = class_icon_url
         
         result = InlineQueryResultArticle(
             id=str(build['build_id']),
