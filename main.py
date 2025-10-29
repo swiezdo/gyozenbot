@@ -5,7 +5,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from config import BOT_TOKEN
-from handlers import gyozen, waves, miniapp, profile
+from handlers import gyozen, waves, miniapp, profile, inline
 
 async def main():
     logging.basicConfig(
@@ -24,6 +24,7 @@ async def main():
         miniapp.router,
         waves.router,
         gyozen.router,
+        inline.router,
     )
 
     await dp.start_polling(bot)
