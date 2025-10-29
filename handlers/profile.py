@@ -91,46 +91,47 @@ def _format_profile(profile_data: dict) -> str:
     # Платформы
     platforms = profile_data.get('platforms', [])
     if platforms:
-        if len(platforms) == 1:
-            text += f"💻 <b>Платформы:</b> {platforms[0]}\n"
-        else:
-            text += f"💻 <b>Платформы:</b>\n"
-            for platform in platforms:
-                text += f"• {platform}\n"
+        text += f"💻 <b>Платформы:</b>\n"
+        for platform in platforms:
+            text += f"- {platform}\n"
     
     # Режимы игры
     modes = profile_data.get('modes', [])
     if modes:
-        if len(modes) == 1:
-            text += f"🎯 <b>Режимы:</b> {modes[0]}\n"
-        else:
-            text += f"🎯 <b>Режимы:</b>\n"
-            for mode in modes:
-                text += f"• {mode}\n"
+        text += f"🎲 <b>Режимы:</b>\n"
+        for mode in modes:
+            text += f"- {mode}\n"
     
     # Цели
     goals = profile_data.get('goals', [])
     if goals:
-        text += f"🎯 <b>Цели:</b> {', '.join(goals)}\n"
+        text += f"🎯 <b>Цели:</b>\n"
+        for goal in goals:
+            text += f"- {goal}\n"
     
     # Сложности
     difficulties = profile_data.get('difficulties', [])
     if difficulties:
-        if len(difficulties) == 1:
-            text += f"⚡ <b>Сложности:</b> {difficulties[0]}\n"
-        else:
-            text += f"⚡ <b>Сложности:</b>\n"
-            for difficulty in difficulties:
-                text += f"• {difficulty}\n"
+        text += f"⚡ <b>Сложности:</b>\n"
+        for difficulty in difficulties:
+            text += f"- {difficulty}\n"
     
     # Трофеи - упрощенная версия
-    trophies = profile_data.get('trophies', '')
-    if trophies and trophies.strip():
-        text += f"🏆 <b>Трофеи:</b>\n"
-        # Парсим строку через запятую и отображаем
+    trophies = profile_data.get('trophies', [])
+    # Обрабатываем как список или строку
+    if isinstance(trophies, str):
+        # Если трофеи пришли как строка, парсим её
         trophy_list = [t.strip() for t in trophies.split(',') if t.strip()]
+    elif isinstance(trophies, list):
+        # Если трофеи уже список, используем его
+        trophy_list = [t.strip() if isinstance(t, str) else str(t) for t in trophies if t]
+    else:
+        trophy_list = []
+    
+    if trophy_list:
+        text += f"🏆 <b>Трофеи:</b>\n"
         for trophy_name in trophy_list:
-            text += f"• {trophy_name}\n"
+            text += f"- {trophy_name}\n"
     
     return text
 
