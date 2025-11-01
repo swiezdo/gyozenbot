@@ -80,9 +80,8 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 MINI_APP_URL = os.getenv("MINI_APP_URL", "https://swiezdo.github.io/tsushimaru_app/")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://tsushimaru.com")
 
-# Группа для трофеев
-TROPHY_GROUP_CHAT_ID = os.getenv("TROPHY_GROUP_CHAT_ID", "-1002348168326")
-TROPHY_GROUP_TOPIC_ID = os.getenv("TROPHY_GROUP_TOPIC_ID", "5675")
+# Группа для поздравлений участников
+CONGRATULATIONS_CHAT_ID = os.getenv("CONGRATULATIONS_CHAT_ID", "-1002348168326")
 
 # --- Константы для тем -------------------------------------
 # ID первого сообщения темы "legends" - если ответ на это сообщение, 

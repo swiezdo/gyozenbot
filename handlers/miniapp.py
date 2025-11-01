@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Telegram Bot handler для мини-приложения Tsushima
-Интегрирует WebApp и обработку модерации трофеев
+Интегрирует WebApp
 """
 
 import asyncio
@@ -16,7 +16,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.enums import ChatMemberStatus
 
 from config import (
-    MINI_APP_URL, API_BASE_URL, TROPHY_GROUP_CHAT_ID, TROPHY_GROUP_TOPIC_ID
+    MINI_APP_URL, API_BASE_URL, BOT_TOKEN, CONGRATULATIONS_CHAT_ID
 )
 
 logger = logging.getLogger(__name__)
@@ -31,10 +31,6 @@ async def start_command(message: Message):
 
 Я бот Tsushima.Ru, но друзья зовут меня Местный Гёдзен.
 
-🏆 Здесь ты можешь:
-• Подавать заявки на получение трофеев
-• Отслеживать свой прогресс
-• Получать уведомления о статусе заявок
 • Просматривать свою и чужие анкеты
 • Создавать билды и делиться ими
 
@@ -43,7 +39,7 @@ async def start_command(message: Message):
     # Создаем клавиатуру с кнопкой WebApp
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(
-        text="🏆 Открыть",
+        text="Открыть",
         web_app=WebAppInfo(url=f"{MINI_APP_URL}")
     ))
     
@@ -170,129 +166,280 @@ async def send_build_media_group(message: Message, build_data: dict):
             parse_mode="HTML"
         )
 
-async def get_trophy_and_user_info(user_id: int, trophy_id: str) -> tuple:
-    """Получает название трофея и PSN ID пользователя"""
-    display_name = trophy_id
-    psn_id = str(user_id)
-    
+# ========== ОБРАБОТЧИКИ ЗАЯВОК НА ПОВЫШЕНИЕ УРОВНЯ МАСТЕРСТВА ==========
+
+@router.callback_query(F.data.startswith("approve_mastery:"))
+async def approve_mastery_callback(callback: CallbackQuery):
+    """Обработка кнопки 'Одобрить' для заявки на повышение уровня"""
     try:
-        # Получаем данные трофея по trophy_id из нового API
-        async with aiohttp.ClientSession() as session:
-            trophy_url = f"{API_BASE_URL}/api/trophies.getById/{trophy_id}"
-            async with session.get(trophy_url) as trophy_response:
-                if trophy_response.status == 200:
-                    trophy_data = await trophy_response.json()
-                    display_name = trophy_data.get('trophy_name', trophy_id)
-            
-            # Получаем PSN ID пользователя
-            user_url = f"{API_BASE_URL}/api/user_info/{user_id}"
-            async with session.get(user_url) as user_response:
-                if user_response.status == 200:
-                    user_data = await user_response.json()
-                    psn_id = user_data.get('psn_id', str(user_id))
-    except Exception as e:
-        logger.error(f"Ошибка получения данных: {e}")
-    
-    return display_name, psn_id
-
-@router.callback_query(F.data.startswith("trophy_approve:"))
-async def handle_trophy_approve(callback: CallbackQuery):
-    """Обработчик callback кнопки одобрения трофея"""
-    await callback.answer()
-    
-    callback_data = callback.data
-    parts = callback_data.split(":")
-    
-    if len(parts) == 3:
-        user_id = int(parts[1])
-        trophy_id = parts[2]
+        # Парсинг callback_data: approve_mastery:{user_id}:{category_key}:{next_level}
+        parts = callback.data.split(":")
+        if len(parts) != 4:
+            await callback.answer("❌ Ошибка формата данных", show_alert=True)
+            return
         
-        # Получаем данные трофея и пользователя
-        trophy_display_name, psn_id = await get_trophy_and_user_info(user_id, trophy_id)
+        _, target_user_id_str, category_key, next_level_str = parts
+        target_user_id = int(target_user_id_str)
+        next_level = int(next_level_str)
         
-        # Преобразуем trophy_id в trophy_name для API
-        trophy_name = trophy_display_name
+        # Получаем username модератора
+        moderator_username = callback.from_user.username or callback.from_user.first_name or "Модератор"
         
-        success = await approve_trophy(user_id, trophy_name)
+        # Делаем запрос к API для одобрения заявки
+        from config import API_BASE_URL, BOT_TOKEN, CONGRATULATIONS_CHAT_ID
         
-        if success:
-            await callback.message.edit_text(
-                f"✅ Заявка одобрена\n\nТрофей: {trophy_display_name}\nПользователь: {psn_id}"
-            )
-        else:
-            await callback.message.edit_text(
-                f"❌ Ошибка при одобрении трофея"
-            )
-
-@router.callback_query(F.data.startswith("trophy_reject:"))
-async def handle_trophy_reject(callback: CallbackQuery):
-    """Обработчик callback кнопки отклонения трофея"""
-    await callback.answer()
-    
-    callback_data = callback.data
-    parts = callback_data.split(":")
-    
-    if len(parts) == 3:
-        user_id = int(parts[1])
-        trophy_id = parts[2]
+        data = aiohttp.FormData()
+        data.add_field('user_id', str(target_user_id))
+        data.add_field('category_key', category_key)
+        data.add_field('next_level', str(next_level))
+        data.add_field('moderator_username', moderator_username)
         
-        # Получаем данные трофея и пользователя
-        trophy_display_name, psn_id = await get_trophy_and_user_info(user_id, trophy_id)
-        
-        # Преобразуем trophy_id в trophy_name для API
-        trophy_name = trophy_display_name
-        
-        success = await reject_trophy(user_id, trophy_name)
-        
-        if success:
-            await callback.message.edit_text(
-                f"❌ Заявка отклонена\n\nТрофей: {trophy_display_name}\nПользователь: {psn_id}"
-            )
-        else:
-            await callback.message.edit_text(
-                f"❌ Ошибка при отклонении трофея"
-            )
-
-async def approve_trophy(user_id: int, trophy_name: str) -> bool:
-    """Одобряет трофей через API"""
-    try:
-        async with aiohttp.ClientSession() as session:
-            url = f"{API_BASE_URL}/api/trophies.approve"
-            data = {
-                "user_id": user_id,
-                "trophy_name": trophy_name
-            }
-            
-            async with session.post(url, data=data) as response:
-                if response.status == 200:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{API_BASE_URL}/api/mastery.approve",
+                    data=data,
+                    headers={"Authorization": BOT_TOKEN},
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        logger.error(f"Ошибка API при одобрении: {response.status} - {error_text}")
+                        await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
+                        return
+                    
                     result = await response.json()
-                    logger.info(f"Трофей {trophy_name} одобрен для пользователя {user_id}: {result}")
-                    return True
-                else:
-                    logger.error(f"Ошибка одобрения трофея: {response.status}")
-                    return False
+                    
+                    if not result.get('success'):
+                        await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
+                        return
+                    
+                    # Получаем данные из ответа
+                    category_name = result.get('category_name', category_key)
+                    level_name = result.get('level_name', f'Уровень {next_level}')
+                    psn_id = result.get('psn_id', '')
+                    username = result.get('username', '')
+                    
+                    # Отправляем сообщение в группу поздравлений
+                    if CONGRATULATIONS_CHAT_ID:
+                        try:
+                            # Получаем username пользователя через Bot API
+                            user_mention = psn_id  # fallback на psn_id
+                            try:
+                                chat_info = await callback.bot.get_chat(target_user_id)
+                                if chat_info.username:
+                                    user_mention = f"@{chat_info.username}"
+                                elif chat_info.first_name:
+                                    user_mention = chat_info.first_name
+                                else:
+                                    user_mention = psn_id
+                            except Exception as e:
+                                logger.error(f"Ошибка получения username пользователя {target_user_id}: {e}")
+                                user_mention = username if username else psn_id
+                            
+                            await callback.bot.send_message(
+                                chat_id=CONGRATULATIONS_CHAT_ID,
+                                text=f"🎉 Участник {user_mention} ({psn_id}) повысил свой уровень в категории <b>{category_name}</b> — Уровень {next_level}, {level_name}",
+                                parse_mode="HTML"
+                            )
+                        except Exception as e:
+                            logger.error(f"Ошибка отправки сообщения в группу поздравлений: {e}")
+                    
+                    # Редактируем исходное сообщение (добавляем информацию в конец и убираем кнопки)
+                    try:
+                        original_text = callback.message.text or callback.message.caption or ""
+                        updated_text = original_text + f"\n\n✅ Заявка одобрена @{moderator_username}"
+                        
+                        if callback.message.photo:
+                            await callback.message.edit_caption(
+                                caption=updated_text,
+                                parse_mode="HTML",
+                                reply_markup=None  # Убираем кнопки
+                            )
+                        else:
+                            await callback.message.edit_text(
+                                text=updated_text,
+                                parse_mode="HTML",
+                                reply_markup=None  # Убираем кнопки
+                            )
+                    except Exception as e:
+                        logger.error(f"Ошибка редактирования сообщения: {e}")
+                    
+                    await callback.answer("✅ Заявка одобрена!", show_alert=False)
+        
+        except aiohttp.ClientError as e:
+            logger.error(f"Ошибка сети при одобрении заявки: {e}")
+            await callback.answer("❌ Ошибка подключения к серверу", show_alert=True)
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при одобрении заявки: {e}")
+            await callback.answer("❌ Произошла ошибка", show_alert=True)
+        
+    except ValueError as e:
+        logger.error(f"Ошибка парсинга callback данных: {e}")
+        await callback.answer("❌ Ошибка обработки запроса", show_alert=True)
     except Exception as e:
-        logger.error(f"Ошибка при одобрении трофея: {e}")
-        return False
+        logger.error(f"Ошибка обработки одобрения заявки: {e}")
+        await callback.answer("❌ Произошла ошибка", show_alert=True)
 
-async def reject_trophy(user_id: int, trophy_name: str) -> bool:
-    """Отклоняет трофей через API"""
+
+@router.callback_query(F.data.startswith("reject_mastery:"))
+async def reject_mastery_callback(callback: CallbackQuery):
+    """Обработка кнопки 'Отклонить' для заявки на повышение уровня"""
     try:
-        async with aiohttp.ClientSession() as session:
-            url = f"{API_BASE_URL}/api/trophies.reject"
-            data = {
-                "user_id": user_id,
-                "trophy_name": trophy_name
-            }
-            
-            async with session.post(url, data=data) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    logger.info(f"Трофей {trophy_name} отклонен для пользователя {user_id}: {result}")
-                    return True
-                else:
-                    logger.error(f"Ошибка отклонения трофея: {response.status}")
-                    return False
+        # Парсинг callback_data: reject_mastery:{user_id}:{category_key}:{next_level}
+        parts = callback.data.split(":")
+        if len(parts) != 4:
+            await callback.answer("❌ Ошибка формата данных", show_alert=True)
+            return
+        
+        _, target_user_id_str, category_key, next_level_str = parts
+        target_user_id = int(target_user_id_str)
+        next_level = int(next_level_str)
+        
+        # Получаем username модератора (того кто нажал кнопку)
+        moderator_username = callback.from_user.username or callback.from_user.first_name or "Модератор"
+        
+        # Запрашиваем причину отклонения у модератора
+        await callback.answer("Введите причину отклонения в ответ на следующее сообщение", show_alert=True)
+        
+        # Отправляем сообщение с инструкцией
+        instruction_msg = await callback.message.reply(
+            "❌ <b>Заявка будет отклонена</b>\n\n"
+            "Пожалуйста, введите причину отклонения в ответ на это сообщение:",
+            parse_mode="HTML"
+        )
+        
+        # Сохраняем состояние ожидания причины
+        if not hasattr(reject_mastery_callback, '_pending_rejects'):
+            reject_mastery_callback._pending_rejects = {}
+        
+        original_text = callback.message.text or callback.message.caption or ""
+        
+        reject_mastery_callback._pending_rejects[instruction_msg.message_id] = {
+            'user_id': target_user_id,
+            'category_key': category_key,
+            'next_level': next_level,
+            'original_message_id': callback.message.message_id,
+            'instruction_message_id': instruction_msg.message_id,
+            'chat_id': callback.message.chat.id,
+            'has_photo': callback.message.photo is not None,
+            'original_text': original_text,
+            'moderator_username': moderator_username
+        }
+        
+    except ValueError as e:
+        logger.error(f"Ошибка парсинга callback данных: {e}")
+        await callback.answer("❌ Ошибка обработки запроса", show_alert=True)
     except Exception as e:
-        logger.error(f"Ошибка при отклонении трофея: {e}")
-        return False
+        logger.error(f"Ошибка обработки отклонения заявки: {e}")
+        await callback.answer("❌ Произошла ошибка", show_alert=True)
+
+
+@router.message(F.reply_to_message)
+async def handle_rejection_reason(message: Message):
+    """Обработка ответа с причиной отклонения"""
+    try:
+        replied_message = message.reply_to_message
+        
+        # Проверяем, не является ли это ответом на сообщение об отклонении
+        if not hasattr(reject_mastery_callback, '_pending_rejects'):
+            return
+        
+        pending_key = replied_message.message_id
+        if pending_key not in reject_mastery_callback._pending_rejects:
+            return
+        
+        pending_data = reject_mastery_callback._pending_rejects.pop(pending_key)
+        target_user_id = pending_data['user_id']
+        category_key = pending_data['category_key']
+        next_level = pending_data['next_level']
+        original_message_id = pending_data['original_message_id']
+        instruction_message_id = pending_data['instruction_message_id']
+        chat_id = pending_data['chat_id']
+        has_photo = pending_data.get('has_photo', False)
+        original_text = pending_data.get('original_text', '')
+        
+        reason = message.text.strip() if message.text else "Причина не указана"
+        
+        # Получаем username модератора (того кто нажал кнопку)
+        # Но нам нужен username того кто нажал кнопку, а не того кто написал причину
+        # Сохраним его в pending_data
+        moderator_username = pending_data.get('moderator_username') or message.from_user.username or message.from_user.first_name or "Модератор"
+        
+        # Делаем запрос к API для отклонения заявки
+        data = aiohttp.FormData()
+        data.add_field('user_id', str(target_user_id))
+        data.add_field('category_key', category_key)
+        data.add_field('next_level', str(next_level))
+        data.add_field('reason', reason)
+        data.add_field('moderator_username', moderator_username)
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{API_BASE_URL}/api/mastery.reject",
+                    data=data,
+                    headers={"Authorization": BOT_TOKEN},
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        logger.error(f"Ошибка API при отклонении: {response.status} - {error_text}")
+                        await message.reply("❌ Ошибка обработки заявки")
+                        return
+                    
+                    result = await response.json()
+                    
+                    if not result.get('success'):
+                        await message.reply("❌ Ошибка обработки заявки")
+                        return
+                    
+                    # Редактируем сообщение-инструкцию (то на которое отвечают)
+                    try:
+                        updated_instruction_text = f"""❌ <b>Заявка отклонена</b>
+
+Кем: @{moderator_username}
+Причина: {reason}
+
+✅ Уведомление отправлено пользователю"""
+                        
+                        await message.bot.edit_message_text(
+                            chat_id=chat_id,
+                            message_id=instruction_message_id,
+                            text=updated_instruction_text,
+                            parse_mode="HTML"
+                        )
+                    except Exception as e:
+                        logger.error(f"Ошибка редактирования сообщения-инструкции: {e}")
+                    
+                    # Убираем кнопки из исходного сообщения с заявкой (без изменения текста)
+                    try:
+                        if has_photo:
+                            await message.bot.edit_message_caption(
+                                chat_id=chat_id,
+                                message_id=original_message_id,
+                                caption=original_text,
+                                parse_mode="HTML",
+                                reply_markup=None
+                            )
+                        else:
+                            await message.bot.edit_message_text(
+                                chat_id=chat_id,
+                                message_id=original_message_id,
+                                text=original_text,
+                                parse_mode="HTML",
+                                reply_markup=None
+                            )
+                    except Exception as e:
+                        logger.error(f"Ошибка редактирования исходного сообщения: {e}")
+        
+        except aiohttp.ClientError as e:
+            logger.error(f"Ошибка сети при отклонении заявки: {e}")
+            await message.reply("❌ Ошибка подключения к серверу")
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при отклонении заявки: {e}")
+            await message.reply("❌ Произошла ошибка")
+        
+    except Exception as e:
+        logger.error(f"Ошибка обработки причины отклонения: {e}")
+        await message.reply("❌ Произошла ошибка при обработке причины")

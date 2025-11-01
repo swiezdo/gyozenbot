@@ -116,22 +116,7 @@ def _format_profile(profile_data: dict) -> str:
         for difficulty in difficulties:
             text += f"- {difficulty}\n"
     
-    # Трофеи - упрощенная версия
-    trophies = profile_data.get('trophies', [])
-    # Обрабатываем как список или строку
-    if isinstance(trophies, str):
-        # Если трофеи пришли как строка, парсим её
-        trophy_list = [t.strip() for t in trophies.split(',') if t.strip()]
-    elif isinstance(trophies, list):
-        # Если трофеи уже список, используем его
-        trophy_list = [t.strip() if isinstance(t, str) else str(t) for t in trophies if t]
-    else:
-        trophy_list = []
-    
-    if trophy_list:
-        text += f"🏆 <b>Трофеи:</b>\n"
-        for trophy_name in trophy_list:
-            text += f"- {trophy_name}\n"
+    # Трофеи удалены из системы
     
     return text
 
