@@ -2,6 +2,7 @@
 import sys
 import os
 import logging
+import requests
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
@@ -10,7 +11,13 @@ from aiogram.filters import Command
 sys.path.append('/root/miniapp_api')
 from db import get_user
 
-from config import GROUP_ID, LEGENDS_TOPIC_FIRST_MESSAGE
+from config import GROUP_ID, LEGENDS_TOPIC_FIRST_MESSAGE, API_BASE_URL
+
+# Разрешенные группы для команды !п
+ALLOWED_GROUP_IDS = [
+    GROUP_ID,  # Основная группа из конфига
+    -1002348168326,  # Группа для трофеев (из miniapp_api/app.py)
+]
 
 router = Router()
 
@@ -23,24 +30,25 @@ logger = logging.getLogger(__name__)
 def _is_allowed_context(message: Message) -> bool:
     """
     Проверяет, разрешён ли контекст для команды профиля.
+    Разрешает команду в разрешенных группах.
     """
     # ЛС - не разрешено
     if message.chat.type == "private":
         logger.debug(f"ЛС не разрешено для команды профиля")
         return False
     
-    # Группа/супергруппа — только заданная группа
+    # Группа/супергруппа — проверяем список разрешенных групп
     if message.chat.type in ("group", "supergroup"):
-        if message.chat.id != GROUP_ID:
-            logger.debug(f"Чат {message.chat.id} не совпадает с разрешённым {GROUP_ID}")
+        if message.chat.id not in ALLOWED_GROUP_IDS:
+            logger.debug(f"Чат {message.chat.id} не входит в список разрешённых групп {ALLOWED_GROUP_IDS}")
             return False
         
-        # Проверяем тему - разрешаем команду !п во всех темах основной группы
+        # Разрешаем команду !п во всех темах разрешенных групп
         if message.is_topic_message:
             logger.info(f"Сообщение в теме {message.message_thread_id}, команда !п разрешена во всех темах")
             return True
         else:
-            logger.info(f"Сообщение не в теме, разрешено")
+            logger.info(f"Сообщение не в теме, команда !п разрешена")
             return True
     
     logger.debug(f"Неизвестный тип чата: {message.chat.type}")
@@ -124,6 +132,7 @@ def _format_profile(profile_data: dict) -> str:
 async def profile_command(message: Message):
     """
     Обработчик команды !п для просмотра профиля пользователя.
+    Отправляет скриншот профиля через API endpoint.
     """
     logger.info(f"Обнаружена команда !п от пользователя {message.from_user.id}")
     
@@ -139,19 +148,54 @@ async def profile_command(message: Message):
         target_user_id = _get_target_user_id(message)
         logger.info(f"Целевой пользователь для команды !п: {target_user_id}")
         
-        # Получаем профиль из БД
+        # Получаем профиль из БД для проверки существования
         logger.info(f"Запрашиваем профиль пользователя {target_user_id} из БД {DB_PATH}")
         profile_data = get_user(DB_PATH, target_user_id)
-        logger.info(f"Получены данные профиля: {profile_data}")
         
-        # Форматируем и отправляем ответ
-        formatted_profile = _format_profile(profile_data)
-        logger.info(f"Отправляем ответ пользователю {message.from_user.id}")
-        await message.reply(formatted_profile, parse_mode="HTML")
-        logger.info(f"Ответ успешно отправлен")
+        if not profile_data:
+            error_msg = "❌ Профиль не найден"
+            await message.reply(error_msg)
+            return
         
+        # Подготавливаем параметры для API запроса
+        chat_id = str(message.chat.id)
+        message_thread_id = message.message_thread_id if message.is_topic_message else None
+        
+        # Определяем URL API
+        api_url = os.getenv("API_BASE_URL", API_BASE_URL or "http://localhost:8000")
+        if not api_url.startswith("http"):
+            api_url = "http://localhost:8000"
+        
+        endpoint_url = f"{api_url}/api/send_profile/{target_user_id}"
+        
+        # Параметры запроса
+        params = {
+            "chat_id": chat_id
+        }
+        if message_thread_id:
+            params["message_thread_id"] = message_thread_id
+        
+        logger.info(f"Вызываем API endpoint: {endpoint_url} с параметрами: {params}")
+        
+        # Вызываем API endpoint
+        response = requests.post(endpoint_url, params=params, timeout=60)
+        
+        if response.status_code == 200:
+            result = response.json()
+            logger.info(f"Скриншот профиля успешно отправлен: {result.get('message', 'OK')}")
+            # Не отправляем дополнительное сообщение, фото уже отправлено
+        else:
+            error_detail = response.json().get('detail', 'Unknown error') if response.status_code < 500 else response.text
+            logger.error(f"Ошибка API при отправке скриншота: {response.status_code} - {error_detail}")
+            error_msg = f"❌ Ошибка при создании скриншота профиля: {error_detail}"
+            await message.reply(error_msg)
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Ошибка запроса к API: {str(e)}", exc_info=True)
+        error_msg = f"❌ Ошибка при обращении к API: {str(e)}"
+        await message.reply(error_msg)
     except Exception as e:
-        # Обработка ошибок
+        # Обработка других ошибок
         logger.error(f"Ошибка при обработке команды !п: {str(e)}", exc_info=True)
         error_msg = f"❌ Ошибка при получении профиля: {str(e)}"
         await message.reply(error_msg)
