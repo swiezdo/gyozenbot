@@ -81,7 +81,7 @@ MINI_APP_URL = os.getenv("MINI_APP_URL", "https://swiezdo.github.io/tsushimaru_a
 API_BASE_URL = os.getenv("API_BASE_URL", "https://tsushimaru.com")
 
 # Группа для поздравлений участников
-CONGRATULATIONS_CHAT_ID = os.getenv("CONGRATULATIONS_CHAT_ID", "-1002348168326")
+CONGRATULATIONS_CHAT_ID = os.getenv("CONGRATULATIONS_CHAT_ID", "-1002365374672")
 
 # --- Константы для тем -------------------------------------
 # ID первого сообщения темы "legends" - если ответ на это сообщение, 
