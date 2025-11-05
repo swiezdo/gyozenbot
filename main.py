@@ -19,12 +19,14 @@ async def main():
     )
     dp = Dispatcher()
 
+    # Роутеры подключены в произвольном порядке - порядок не важен,
+    # так как все обработчики используют специфичные фильтры
     dp.include_routers(
-        profile.router,
-        miniapp.router,
-        waves.router,
-        gyozen.router,
-        inline.router,
+        inline.router,      # inline queries - не конфликтует с message handlers
+        gyozen.router,      # теперь с фильтром F.text.regexp() - не перехватывает все сообщения
+        waves.router,       # команды !волны и !записатьволны
+        profile.router,     # команда !п
+        miniapp.router,     # команды /start, /build, callback queries, reply_to_message
     )
 
     await dp.start_polling(bot)

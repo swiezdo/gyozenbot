@@ -1,7 +1,7 @@
 import re
 import time
 import random
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.types import Message
 
 from waiting_phrases import WAITING_PHRASES
@@ -28,7 +28,11 @@ def _is_allowed_context(m: Message) -> bool:
         return bool(m.is_topic_message and m.message_thread_id == GYOZEN_TOPIC_ID)
     return False
 
-@router.message()
+# Специфичный фильтр: проверяем наличие паттерна "гёдзен" в тексте
+# Это гарантирует, что обработчик срабатывает только для сообщений с этим паттерном
+@router.message(
+    F.text.regexp(r"г[ёе]д[зс][еэ]н", flags=re.IGNORECASE)
+)
 async def gyozen_entrypoint(message: Message):
     text = (message.text or "").strip()
     print(f"DEBUG: Получено сообщение для гёдзена: '{text}' от {message.from_user.id}")
@@ -42,9 +46,6 @@ async def gyozen_entrypoint(message: Message):
     if not _is_allowed_context(message):
         print(f"DEBUG: Контекст не разрешен - чат: {message.chat.id}, тип: {message.chat.type}, тема: {message.message_thread_id}")
         print(f"DEBUG: Ожидается GROUP_ID: {GROUP_ID}, GYOZEN_TOPIC_ID: {GYOZEN_TOPIC_ID}")
-        return
-    if not PATTERN.search(text):
-        print("DEBUG: Паттерн 'гёдзен' не найден, пропускаем")
         return
     
     print("DEBUG: Обрабатываем сообщение гёдзена")
