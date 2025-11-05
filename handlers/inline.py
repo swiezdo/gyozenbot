@@ -18,31 +18,37 @@ from config import API_BASE_URL, MINI_APP_URL
 logger = logging.getLogger(__name__)
 router = Router()
 
-# Маппинг классов к SVG иконкам
+# Маппинг классов к иконкам
 # Иконки находятся на GitHub, используем raw.githubusercontent.com для прямого доступа
-# Извлекаем username/repo из MINI_APP_URL или используем дефолт
-_mini_app_url = MINI_APP_URL.rstrip('/')
-# Из URL https://swiezdo.github.io/tsushimaru_app/ извлекаем swiezdo/tsushimaru_app
-if 'github.io' in _mini_app_url:
-    # Парсим URL вида https://username.github.io/repo_name/
-    parts = _mini_app_url.replace('https://', '').replace('http://', '').split('/')
-    if len(parts) >= 2:
-        username = parts[0].replace('.github.io', '')
-        repo_name = parts[1] if len(parts) > 1 else 'tsushimaru_app'
-        # Используем main как дефолтную ветку, можно также попробовать master
-        _raw_base = f'https://raw.githubusercontent.com/{username}/{repo_name}/main'
-    else:
-        _raw_base = 'https://raw.githubusercontent.com/swiezdo/tsushimaru_app/main'
-else:
-    # Если не GitHub Pages, используем исходный URL
-    _raw_base = _mini_app_url
+# Lazy evaluation - вычисляем только при первом использовании
 
-CLASS_ICONS = {
-    'Самурай': f'{_raw_base}/docs/assets/icons/samurai.png',
-    'Охотник': f'{_raw_base}/docs/assets/icons/hunter.png',
-    'Убийца': f'{_raw_base}/docs/assets/icons/assassin.png',
-    'Ронин': f'{_raw_base}/docs/assets/icons/ronin.png'
-}
+def _get_raw_base() -> str:
+    """Получает базовый URL для иконок (lazy evaluation)"""
+    _mini_app_url = MINI_APP_URL.rstrip('/')
+    # Из URL https://swiezdo.github.io/tsushimaru_app/ извлекаем swiezdo/tsushimaru_app
+    if 'github.io' in _mini_app_url:
+        # Парсим URL вида https://username.github.io/repo_name/
+        parts = _mini_app_url.replace('https://', '').replace('http://', '').split('/')
+        if len(parts) >= 2:
+            username = parts[0].replace('.github.io', '')
+            repo_name = parts[1] if len(parts) > 1 else 'tsushimaru_app'
+            # Используем main как дефолтную ветку
+            return f'https://raw.githubusercontent.com/{username}/{repo_name}/main'
+        else:
+            return 'https://raw.githubusercontent.com/swiezdo/tsushimaru_app/main'
+    else:
+        # Если не GitHub Pages, используем исходный URL
+        return _mini_app_url
+
+def _get_class_icons() -> dict:
+    """Получает словарь с URL иконок классов (lazy evaluation)"""
+    _raw_base = _get_raw_base()
+    return {
+        'Самурай': f'{_raw_base}/docs/assets/icons/samurai.png',
+        'Охотник': f'{_raw_base}/docs/assets/icons/hunter.png',
+        'Убийца': f'{_raw_base}/docs/assets/icons/assassin.png',
+        'Ронин': f'{_raw_base}/docs/assets/icons/ronin.png'
+    }
 
 async def search_builds(query: str, limit: int = 10) -> list:
     """Поиск билдов через API"""
@@ -100,10 +106,13 @@ async def inline_query_handler(inline_query: InlineQuery):
     # Формируем результаты для Telegram
     results = []
     
+    # Получаем иконки классов (lazy evaluation)
+    class_icons = _get_class_icons()
+    
     for build in builds:
         # Получаем иконку класса
         build_class = build.get('class', 'Самурай')
-        class_icon_url = CLASS_ICONS.get(build_class, CLASS_ICONS['Самурай'])
+        class_icon_url = class_icons.get(build_class, class_icons['Самурай'])
         
         # Формируем title: "ID: Название"
         title = f"{build['build_id']}: {build['name']}"

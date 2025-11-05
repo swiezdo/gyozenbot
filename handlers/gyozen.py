@@ -1,6 +1,7 @@
 import re
 import time
 import random
+import logging
 from aiogram import Router, F
 from aiogram.types import Message
 
@@ -10,8 +11,8 @@ from image_generator import generate_image
 from config import GROUP_ID, GYOZEN_TOPIC_ID, OWNER_ID
 
 router = Router()
+logger = logging.getLogger(__name__)
 
-PATTERN = re.compile(r"г[ёе]д[зс][еэ]н", re.IGNORECASE)
 RECENT_SECONDS = 60
 
 def _is_recent(ts: float) -> bool:
@@ -35,20 +36,20 @@ def _is_allowed_context(m: Message) -> bool:
 )
 async def gyozen_entrypoint(message: Message):
     text = (message.text or "").strip()
-    print(f"DEBUG: Получено сообщение для гёдзена: '{text}' от {message.from_user.id}")
+    logger.debug(f"Получено сообщение для гёдзена: '{text}' от {message.from_user.id}")
     
     if not text:
-        print("DEBUG: Пустое сообщение, пропускаем")
+        logger.debug("Пустое сообщение, пропускаем")
         return
     if not _is_recent(message.date.timestamp()):
-        print("DEBUG: Сообщение не свежее, пропускаем")
+        logger.debug("Сообщение не свежее, пропускаем")
         return
     if not _is_allowed_context(message):
-        print(f"DEBUG: Контекст не разрешен - чат: {message.chat.id}, тип: {message.chat.type}, тема: {message.message_thread_id}")
-        print(f"DEBUG: Ожидается GROUP_ID: {GROUP_ID}, GYOZEN_TOPIC_ID: {GYOZEN_TOPIC_ID}")
+        logger.debug(f"Контекст не разрешен - чат: {message.chat.id}, тип: {message.chat.type}, тема: {message.message_thread_id}")
+        logger.debug(f"Ожидается GROUP_ID: {GROUP_ID}, GYOZEN_TOPIC_ID: {GYOZEN_TOPIC_ID}")
         return
     
-    print("DEBUG: Обрабатываем сообщение гёдзена")
+    logger.debug("Обрабатываем сообщение гёдзена")
 
     # Ветка "нарисуй ..."
     m = re.search(r"г[ёе]д[зс][еэ]н.*нарисуй(.*)$", text, re.IGNORECASE | re.DOTALL)

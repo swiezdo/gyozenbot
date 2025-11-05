@@ -1,22 +1,20 @@
 # /gyozenbot/handlers/profile.py
 import sys
-import os
 import logging
 import requests
 from aiogram import Router, F
 from aiogram.types import Message
-from aiogram.filters import Command
 
 # Добавляем путь к miniapp_api для импорта db модуля
 sys.path.append('/root/miniapp_api')
 from db import get_user
 
-from config import GROUP_ID, LEGENDS_TOPIC_FIRST_MESSAGE, API_BASE_URL
+from config import GROUP_ID, LEGENDS_TOPIC_FIRST_MESSAGE, API_BASE_URL, TROPHY_GROUP_CHAT_ID
 
 # Разрешенные группы для команды !п
 ALLOWED_GROUP_IDS = [
     GROUP_ID,  # Основная группа из конфига
-    -1002348168326,  # Группа для трофеев (из miniapp_api/app.py)
+    TROPHY_GROUP_CHAT_ID,  # Группа для трофеев
 ]
 
 router = Router()
@@ -74,60 +72,6 @@ def _get_target_user_id(message: Message) -> int:
         # Просто команда без ответа - показываем профиль автора команды
         return message.from_user.id
 
-def _format_profile(profile_data: dict) -> str:
-    """
-    Форматирует данные профиля в красивое сообщение.
-    """
-    if not profile_data:
-        return "❌ Профиль не найден"
-    
-    # Проверяем, заполнен ли профиль
-    if not profile_data.get('real_name') and not profile_data.get('psn_id'):
-        return "❌ Пользователь не зарегистрирован или профиль не заполнен"
-    
-    # Формируем сообщение
-    text = "👤 <b>Профиль пользователя</b>\n\n"
-    
-    # Реальное имя
-    if profile_data.get('real_name'):
-        text += f"📝 <b>Имя:</b> {profile_data['real_name']}\n"
-    
-    # PSN ID
-    if profile_data.get('psn_id'):
-        text += f"🎮 <b>PSN ID:</b> {profile_data['psn_id']}\n"
-    
-    # Платформы
-    platforms = profile_data.get('platforms', [])
-    if platforms:
-        text += f"💻 <b>Платформы:</b>\n"
-        for platform in platforms:
-            text += f"- {platform}\n"
-    
-    # Режимы игры
-    modes = profile_data.get('modes', [])
-    if modes:
-        text += f"🎲 <b>Режимы:</b>\n"
-        for mode in modes:
-            text += f"- {mode}\n"
-    
-    # Цели
-    goals = profile_data.get('goals', [])
-    if goals:
-        text += f"🎯 <b>Цели:</b>\n"
-        for goal in goals:
-            text += f"- {goal}\n"
-    
-    # Сложности
-    difficulties = profile_data.get('difficulties', [])
-    if difficulties:
-        text += f"⚡ <b>Сложности:</b>\n"
-        for difficulty in difficulties:
-            text += f"- {difficulty}\n"
-    
-    # Трофеи удалены из системы
-    
-    return text
-
 @router.message(F.text == "!п")
 async def profile_command(message: Message):
     """
@@ -161,8 +105,8 @@ async def profile_command(message: Message):
         chat_id = str(message.chat.id)
         message_thread_id = message.message_thread_id if message.is_topic_message else None
         
-        # Определяем URL API
-        api_url = os.getenv("API_BASE_URL", API_BASE_URL or "http://localhost:8000")
+        # Определяем URL API (используем значение из config, fallback на localhost)
+        api_url = API_BASE_URL or "http://localhost:8000"
         if not api_url.startswith("http"):
             api_url = "http://localhost:8000"
         

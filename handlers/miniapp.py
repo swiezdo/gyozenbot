@@ -7,16 +7,14 @@ Telegram Bot handler для мини-приложения Tsushima
 
 import asyncio
 import aiohttp
-import json
 import logging
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, InputMediaPhoto
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.enums import ChatMemberStatus
 
 from config import (
-    MINI_APP_URL, API_BASE_URL, BOT_TOKEN, CONGRATULATIONS_CHAT_ID
+    MINI_APP_URL, API_BASE_URL, BOT_TOKEN, GROUP_ID
 )
 
 logger = logging.getLogger(__name__)
@@ -186,8 +184,6 @@ async def approve_mastery_callback(callback: CallbackQuery):
         moderator_username = callback.from_user.username or callback.from_user.first_name or "Модератор"
         
         # Делаем запрос к API для одобрения заявки
-        from config import API_BASE_URL, BOT_TOKEN, CONGRATULATIONS_CHAT_ID
-        
         data = aiohttp.FormData()
         data.add_field('user_id', str(target_user_id))
         data.add_field('category_key', category_key)
@@ -221,7 +217,7 @@ async def approve_mastery_callback(callback: CallbackQuery):
                     username = result.get('username', '')
                     
                     # Отправляем сообщение в группу поздравлений
-                    if CONGRATULATIONS_CHAT_ID:
+                    if GROUP_ID:
                         try:
                             # Получаем username пользователя через Bot API
                             user_mention = psn_id  # fallback на psn_id
@@ -238,7 +234,7 @@ async def approve_mastery_callback(callback: CallbackQuery):
                                 user_mention = username if username else psn_id
                             
                             await callback.bot.send_message(
-                                chat_id=CONGRATULATIONS_CHAT_ID,
+                                chat_id=GROUP_ID,
                                 text=f"🎉 Участник {user_mention} ({psn_id}) повысил свой уровень в категории <b>{category_name}</b> — Уровень {next_level}, {level_name}",
                                 parse_mode="HTML"
                             )
