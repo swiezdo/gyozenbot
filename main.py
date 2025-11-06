@@ -31,9 +31,7 @@ async def main():
     )
 
     # Запускаем планировщик утренних приветствий параллельно с polling
-    logging.info("Инициализация планировщика...")
     scheduler_task = await scheduler.start_scheduler(bot)
-    logging.info(f"Планировщик инициализирован, задача: {scheduler_task}")
 
     logging.info("Запуск polling...")
     await dp.start_polling(bot)
