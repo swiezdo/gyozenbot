@@ -5,7 +5,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from config import BOT_TOKEN
-from handlers import gyozen, waves, miniapp, profile, inline, scheduler
+from handlers import gyozen, waves, miniapp, profile, inline, scheduler, group_events
 
 async def main():
     logging.basicConfig(
@@ -27,6 +27,7 @@ async def main():
         waves.router,       # команды !волны и !записатьволны
         profile.router,     # команда !п
         miniapp.router,     # команды /start, /build, callback queries, reply_to_message
+        group_events.router, # обработка событий выхода из группы
     )
 
     # Запускаем планировщик утренних приветствий параллельно с polling
