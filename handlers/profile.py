@@ -114,7 +114,8 @@ async def profile_command(message: Message):
         
         # Параметры запроса
         params = {
-            "chat_id": chat_id
+            "chat_id": chat_id,
+            "base_url": api_url
         }
         if message_thread_id:
             params["message_thread_id"] = message_thread_id

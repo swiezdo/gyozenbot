@@ -170,3 +170,4 @@ logs/
 # Bot configuration (sensitive data)
 config_local.py
 secrets.py
+waves.json

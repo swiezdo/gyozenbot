@@ -333,109 +333,368 @@ async def reject_mastery_callback(callback: CallbackQuery):
 
 @router.message(F.reply_to_message)
 async def handle_rejection_reason(message: Message):
-    """Обработка ответа с причиной отклонения"""
+    """Обработка ответа с причиной отклонения (для мастерства и трофеев)"""
     try:
         replied_message = message.reply_to_message
         
-        # Проверяем, не является ли это ответом на сообщение об отклонении
-        if not hasattr(reject_mastery_callback, '_pending_rejects'):
+        # Проверяем, не является ли это ответом на сообщение об отклонении мастерства
+        if hasattr(reject_mastery_callback, '_pending_rejects'):
+            pending_key = replied_message.message_id
+            if pending_key in reject_mastery_callback._pending_rejects:
+                await handle_mastery_rejection(message, pending_key)
+                return
+        
+        # Проверяем, не является ли это ответом на сообщение об отклонении трофея
+        if hasattr(reject_trophy_callback, '_pending_rejects'):
+            pending_key = replied_message.message_id
+            if pending_key in reject_trophy_callback._pending_rejects:
+                await handle_trophy_rejection(message, pending_key)
+                return
+        
+    except Exception as e:
+        logger.error(f"Ошибка обработки причины отклонения: {e}")
+        await message.reply("❌ Произошла ошибка при обработке причины")
+
+
+async def handle_mastery_rejection(message: Message, pending_key: int):
+    """Обработка отклонения заявки на мастерство"""
+    pending_data = reject_mastery_callback._pending_rejects.pop(pending_key)
+    target_user_id = pending_data['user_id']
+    category_key = pending_data['category_key']
+    next_level = pending_data['next_level']
+    original_message_id = pending_data['original_message_id']
+    instruction_message_id = pending_data['instruction_message_id']
+    chat_id = pending_data['chat_id']
+    has_photo = pending_data.get('has_photo', False)
+    original_text = pending_data.get('original_text', '')
+    
+    reason = message.text.strip() if message.text else "Причина не указана"
+    
+    # Получаем username модератора
+    moderator_username = pending_data.get('moderator_username') or message.from_user.username or message.from_user.first_name or "Модератор"
+    
+    # Делаем запрос к API для отклонения заявки
+    data = aiohttp.FormData()
+    data.add_field('user_id', str(target_user_id))
+    data.add_field('category_key', category_key)
+    data.add_field('next_level', str(next_level))
+    data.add_field('reason', reason)
+    data.add_field('moderator_username', moderator_username)
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{API_BASE_URL}/api/mastery.reject",
+                data=data,
+                headers={"Authorization": BOT_TOKEN},
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"Ошибка API при отклонении мастерства: {response.status} - {error_text}")
+                    await message.reply("❌ Ошибка обработки заявки")
+                    return
+                
+                result = await response.json()
+                
+                if not result.get('success'):
+                    await message.reply("❌ Ошибка обработки заявки")
+                    return
+                
+                # Редактируем сообщение-инструкцию
+                try:
+                    updated_instruction_text = f"""❌ <b>Заявка отклонена</b>
+
+Кем: @{moderator_username}
+Причина: {reason}
+
+✅ Уведомление отправлено пользователю"""
+                    
+                    await message.bot.edit_message_text(
+                        chat_id=chat_id,
+                        message_id=instruction_message_id,
+                        text=updated_instruction_text,
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    logger.error(f"Ошибка редактирования сообщения-инструкции: {e}")
+                
+                # Убираем кнопки из исходного сообщения
+                try:
+                    if has_photo:
+                        await message.bot.edit_message_caption(
+                            chat_id=chat_id,
+                            message_id=original_message_id,
+                            caption=original_text,
+                            parse_mode="HTML",
+                            reply_markup=None
+                        )
+                    else:
+                        await message.bot.edit_message_text(
+                            chat_id=chat_id,
+                            message_id=original_message_id,
+                            text=original_text,
+                            parse_mode="HTML",
+                            reply_markup=None
+                        )
+                except Exception as e:
+                    logger.error(f"Ошибка редактирования исходного сообщения: {e}")
+    
+    except aiohttp.ClientError as e:
+        logger.error(f"Ошибка сети при отклонении заявки на мастерство: {e}")
+        await message.reply("❌ Ошибка подключения к серверу")
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка при отклонении заявки на мастерство: {e}")
+        await message.reply("❌ Произошла ошибка")
+
+
+async def handle_trophy_rejection(message: Message, pending_key: int):
+    """Обработка отклонения заявки на трофей"""
+    pending_data = reject_trophy_callback._pending_rejects.pop(pending_key)
+    target_user_id = pending_data['user_id']
+    trophy_key = pending_data['trophy_key']
+    original_message_id = pending_data['original_message_id']
+    instruction_message_id = pending_data['instruction_message_id']
+    chat_id = pending_data['chat_id']
+    has_photo = pending_data.get('has_photo', False)
+    original_text = pending_data.get('original_text', '')
+    
+    reason = message.text.strip() if message.text else "Причина не указана"
+    
+    # Получаем username модератора
+    moderator_username = pending_data.get('moderator_username') or message.from_user.username or message.from_user.first_name or "Модератор"
+    
+    # Делаем запрос к API для отклонения заявки
+    data = aiohttp.FormData()
+    data.add_field('user_id', str(target_user_id))
+    data.add_field('trophy_key', trophy_key)
+    data.add_field('reason', reason)
+    data.add_field('moderator_username', moderator_username)
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{API_BASE_URL}/api/trophy.reject",
+                data=data,
+                headers={"Authorization": BOT_TOKEN},
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"Ошибка API при отклонении трофея: {response.status} - {error_text}")
+                    await message.reply("❌ Ошибка обработки заявки")
+                    return
+                
+                result = await response.json()
+                
+                if not result.get('success'):
+                    await message.reply("❌ Ошибка обработки заявки")
+                    return
+                
+                # Редактируем сообщение-инструкцию
+                try:
+                    updated_instruction_text = f"""❌ <b>Заявка отклонена</b>
+
+Кем: @{moderator_username}
+Причина: {reason}
+
+✅ Уведомление отправлено пользователю"""
+                    
+                    await message.bot.edit_message_text(
+                        chat_id=chat_id,
+                        message_id=instruction_message_id,
+                        text=updated_instruction_text,
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    logger.error(f"Ошибка редактирования сообщения-инструкции: {e}")
+                
+                # Убираем кнопки из исходного сообщения
+                try:
+                    if has_photo:
+                        await message.bot.edit_message_caption(
+                            chat_id=chat_id,
+                            message_id=original_message_id,
+                            caption=original_text,
+                            parse_mode="HTML",
+                            reply_markup=None
+                        )
+                    else:
+                        await message.bot.edit_message_text(
+                            chat_id=chat_id,
+                            message_id=original_message_id,
+                            text=original_text,
+                            parse_mode="HTML",
+                            reply_markup=None
+                        )
+                except Exception as e:
+                    logger.error(f"Ошибка редактирования исходного сообщения: {e}")
+    
+    except aiohttp.ClientError as e:
+        logger.error(f"Ошибка сети при отклонении заявки на трофей: {e}")
+        await message.reply("❌ Ошибка подключения к серверу")
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка при отклонении заявки на трофей: {e}")
+        await message.reply("❌ Произошла ошибка")
+
+
+# ========== ОБРАБОТЧИКИ ЗАЯВОК НА ПОЛУЧЕНИЕ ТРОФЕЯ ==========
+
+@router.callback_query(F.data.startswith("approve_trophy:"))
+async def approve_trophy_callback(callback: CallbackQuery):
+    """Обработка кнопки 'Одобрить' для заявки на получение трофея"""
+    try:
+        # Парсинг callback_data: approve_trophy:{user_id}:{trophy_key}
+        parts = callback.data.split(":")
+        if len(parts) != 3:
+            await callback.answer("❌ Ошибка формата данных", show_alert=True)
             return
         
-        pending_key = replied_message.message_id
-        if pending_key not in reject_mastery_callback._pending_rejects:
-            return
+        _, target_user_id_str, trophy_key = parts
+        target_user_id = int(target_user_id_str)
         
-        pending_data = reject_mastery_callback._pending_rejects.pop(pending_key)
-        target_user_id = pending_data['user_id']
-        category_key = pending_data['category_key']
-        next_level = pending_data['next_level']
-        original_message_id = pending_data['original_message_id']
-        instruction_message_id = pending_data['instruction_message_id']
-        chat_id = pending_data['chat_id']
-        has_photo = pending_data.get('has_photo', False)
-        original_text = pending_data.get('original_text', '')
+        # Получаем username модератора
+        moderator_username = callback.from_user.username or callback.from_user.first_name or "Модератор"
         
-        reason = message.text.strip() if message.text else "Причина не указана"
-        
-        # Получаем username модератора (того кто нажал кнопку)
-        # Но нам нужен username того кто нажал кнопку, а не того кто написал причину
-        # Сохраним его в pending_data
-        moderator_username = pending_data.get('moderator_username') or message.from_user.username or message.from_user.first_name or "Модератор"
-        
-        # Делаем запрос к API для отклонения заявки
+        # Делаем запрос к API для одобрения заявки
         data = aiohttp.FormData()
         data.add_field('user_id', str(target_user_id))
-        data.add_field('category_key', category_key)
-        data.add_field('next_level', str(next_level))
-        data.add_field('reason', reason)
+        data.add_field('trophy_key', trophy_key)
         data.add_field('moderator_username', moderator_username)
         
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{API_BASE_URL}/api/mastery.reject",
+                    f"{API_BASE_URL}/api/trophy.approve",
                     data=data,
                     headers={"Authorization": BOT_TOKEN},
                     timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     if response.status != 200:
                         error_text = await response.text()
-                        logger.error(f"Ошибка API при отклонении: {response.status} - {error_text}")
-                        await message.reply("❌ Ошибка обработки заявки")
+                        logger.error(f"Ошибка API при одобрении трофея: {response.status} - {error_text}")
+                        await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
                         return
                     
                     result = await response.json()
                     
                     if not result.get('success'):
-                        await message.reply("❌ Ошибка обработки заявки")
+                        await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
                         return
                     
-                    # Редактируем сообщение-инструкцию (то на которое отвечают)
-                    try:
-                        updated_instruction_text = f"""❌ <b>Заявка отклонена</b>
-
-Кем: @{moderator_username}
-Причина: {reason}
-
-✅ Уведомление отправлено пользователю"""
-                        
-                        await message.bot.edit_message_text(
-                            chat_id=chat_id,
-                            message_id=instruction_message_id,
-                            text=updated_instruction_text,
-                            parse_mode="HTML"
-                        )
-                    except Exception as e:
-                        logger.error(f"Ошибка редактирования сообщения-инструкции: {e}")
+                    # Получаем данные из ответа
+                    trophy_name = result.get('trophy_name', trophy_key)
+                    psn_id = result.get('psn_id', '')
+                    username = result.get('username', '')
                     
-                    # Убираем кнопки из исходного сообщения с заявкой (без изменения текста)
+                    # Отправляем сообщение в группу поздравлений
+                    if GROUP_ID:
+                        try:
+                            # Получаем username пользователя через Bot API
+                            user_mention = psn_id  # fallback на psn_id
+                            try:
+                                chat_info = await callback.bot.get_chat(target_user_id)
+                                if chat_info.username:
+                                    user_mention = f"@{chat_info.username}"
+                                elif chat_info.first_name:
+                                    user_mention = chat_info.first_name
+                                else:
+                                    user_mention = psn_id
+                            except Exception as e:
+                                logger.error(f"Ошибка получения username пользователя {target_user_id}: {e}")
+                                user_mention = username if username else psn_id
+                            
+                            await callback.bot.send_message(
+                                chat_id=GROUP_ID,
+                                text=f"🎉 Участник {user_mention} ({psn_id}) получил трофей <b>{trophy_name}</b>!",
+                                parse_mode="HTML"
+                            )
+                        except Exception as e:
+                            logger.error(f"Ошибка отправки сообщения в группу поздравлений: {e}")
+                    
+                    # Редактируем исходное сообщение (добавляем информацию в конец и убираем кнопки)
                     try:
-                        if has_photo:
-                            await message.bot.edit_message_caption(
-                                chat_id=chat_id,
-                                message_id=original_message_id,
-                                caption=original_text,
+                        original_text = callback.message.text or callback.message.caption or ""
+                        updated_text = original_text + f"\n\n✅ Заявка одобрена @{moderator_username}"
+                        
+                        if callback.message.photo:
+                            await callback.message.edit_caption(
+                                caption=updated_text,
                                 parse_mode="HTML",
-                                reply_markup=None
+                                reply_markup=None  # Убираем кнопки
                             )
                         else:
-                            await message.bot.edit_message_text(
-                                chat_id=chat_id,
-                                message_id=original_message_id,
-                                text=original_text,
+                            await callback.message.edit_text(
+                                text=updated_text,
                                 parse_mode="HTML",
-                                reply_markup=None
+                                reply_markup=None  # Убираем кнопки
                             )
                     except Exception as e:
-                        logger.error(f"Ошибка редактирования исходного сообщения: {e}")
+                        logger.error(f"Ошибка редактирования сообщения: {e}")
+                    
+                    await callback.answer("✅ Заявка одобрена!", show_alert=False)
         
         except aiohttp.ClientError as e:
-            logger.error(f"Ошибка сети при отклонении заявки: {e}")
-            await message.reply("❌ Ошибка подключения к серверу")
+            logger.error(f"Ошибка сети при одобрении заявки на трофей: {e}")
+            await callback.answer("❌ Ошибка подключения к серверу", show_alert=True)
         except Exception as e:
-            logger.error(f"Неожиданная ошибка при отклонении заявки: {e}")
-            await message.reply("❌ Произошла ошибка")
+            logger.error(f"Неожиданная ошибка при одобрении заявки на трофей: {e}")
+            await callback.answer("❌ Произошла ошибка", show_alert=True)
         
+    except ValueError as e:
+        logger.error(f"Ошибка парсинга callback данных: {e}")
+        await callback.answer("❌ Ошибка обработки запроса", show_alert=True)
     except Exception as e:
-        logger.error(f"Ошибка обработки причины отклонения: {e}")
-        await message.reply("❌ Произошла ошибка при обработке причины")
+        logger.error(f"Ошибка обработки одобрения заявки на трофей: {e}")
+        await callback.answer("❌ Произошла ошибка", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("reject_trophy:"))
+async def reject_trophy_callback(callback: CallbackQuery):
+    """Обработка кнопки 'Отклонить' для заявки на получение трофея"""
+    try:
+        # Парсинг callback_data: reject_trophy:{user_id}:{trophy_key}
+        parts = callback.data.split(":")
+        if len(parts) != 3:
+            await callback.answer("❌ Ошибка формата данных", show_alert=True)
+            return
+        
+        _, target_user_id_str, trophy_key = parts
+        target_user_id = int(target_user_id_str)
+        
+        # Получаем username модератора (того кто нажал кнопку)
+        moderator_username = callback.from_user.username or callback.from_user.first_name or "Модератор"
+        
+        # Запрашиваем причину отклонения у модератора
+        await callback.answer("Введите причину отклонения в ответ на следующее сообщение", show_alert=True)
+        
+        # Отправляем сообщение с инструкцией
+        instruction_msg = await callback.message.reply(
+            "❌ <b>Заявка будет отклонена</b>\n\n"
+            "Пожалуйста, введите причину отклонения в ответ на это сообщение:",
+            parse_mode="HTML"
+        )
+        
+        # Сохраняем состояние ожидания причины
+        if not hasattr(reject_trophy_callback, '_pending_rejects'):
+            reject_trophy_callback._pending_rejects = {}
+        
+        original_text = callback.message.text or callback.message.caption or ""
+        
+        reject_trophy_callback._pending_rejects[instruction_msg.message_id] = {
+            'user_id': target_user_id,
+            'trophy_key': trophy_key,
+            'original_message_id': callback.message.message_id,
+            'instruction_message_id': instruction_msg.message_id,
+            'chat_id': callback.message.chat.id,
+            'has_photo': callback.message.photo is not None,
+            'original_text': original_text,
+            'moderator_username': moderator_username
+        }
+        
+    except ValueError as e:
+        logger.error(f"Ошибка парсинга callback данных: {e}")
+        await callback.answer("❌ Ошибка обработки запроса", show_alert=True)
+    except Exception as e:
+        logger.error(f"Ошибка обработки отклонения заявки на трофей: {e}")
+        await callback.answer("❌ Произошла ошибка", show_alert=True)
