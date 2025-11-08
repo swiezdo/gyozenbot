@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-WEEKS_JSON_PATH = BASE_DIR / "json" / "weeks.json"
-SPAWNS_JSON_PATH = BASE_DIR / "json" / "spawns.json"
+WAVES_DATA_PATH = BASE_DIR / "json" / "waves_data.json"
+WAVES_JSON_PATH = BASE_DIR / "json" / "waves.json"
 
 CB_PART = "waves:part"
 CB_WEEK = "waves:week"
@@ -32,12 +32,14 @@ CB_SPAWN_TYPE = "waves:spawn_type"
 CB_EDIT = "waves:edit"
 CB_EDIT_SELECT = "waves:edit_select"
 CB_EDIT_CANCEL = "waves:edit_cancel"
-CB_DONE = "waves:done"
+CB_SAVE = "waves:save"
 CB_RESET = "waves:reset"
 CB_BACK = "waves:back"
 CB_BACK_WEEK = "waves:back_week"
 CB_BACK_PART = "waves:back_part"
 CB_CANCEL = "waves:cancel"
+CB_LIST = "waves:list"
+CB_NEW = "waves:new"
 
 GROUP_IDS = tuple(
     chat_id for chat_id in (GROUP_ID, TROPHY_GROUP_CHAT_ID) if chat_id
@@ -68,7 +70,7 @@ class WavesSession:
     chat_id: int
     user_id: int
     message_id: Optional[int] = None
-    stage: str = "part"  # part -> week -> confirm -> entry
+    stage: str = "start"  # start -> part -> week -> confirm -> entry
     part: Optional[str] = None
     week: Optional[str] = None
     map_name: Optional[str] = None
@@ -84,7 +86,7 @@ class WavesSession:
     edit_original: Optional[str] = None
 
     def reset(self) -> None:
-        self.stage = "part"
+        self.stage = "start"
         self.part = None
         self.week = None
         self.map_name = None
@@ -110,24 +112,89 @@ def _normalize_week_code(value) -> str:
 
 
 @lru_cache(maxsize=1)
+def _load_waves_data() -> List[dict]:
+    raw = json.loads(WAVES_DATA_PATH.read_text(encoding="utf-8"))
+    if not isinstance(raw, list):
+        raise ValueError("Некорректный формат waves_data.json: ожидается список.")
+    return raw
+
+
+def _week_sort_key(code: str) -> tuple[int, int]:
+    if isinstance(code, (int, float)):
+        code = str(code)
+    if isinstance(code, str):
+        parts = code.split(".")
+        try:
+            if len(parts) == 2:
+                return int(parts[0]), int(parts[1])
+            if len(parts) == 1:
+                return int(parts[0]), 0
+        except ValueError:
+            pass
+    return (0, 0)
+
+
+def _absolute_week_number(code: Optional[str]) -> Optional[int]:
+    if code is None:
+        return None
+    code_str = str(code).strip()
+    if not code_str:
+        return None
+    if "." in code_str:
+        part_str, idx_str = code_str.split(".", 1)
+        try:
+            part = int(part_str)
+            idx = int(idx_str)
+        except ValueError:
+            return None
+        return (part - 1) * 8 + idx
+    try:
+        return int(code_str)
+    except ValueError:
+        return None
+
+
+def _format_week_heading(code: Optional[str]) -> str:
+    if not code:
+        return "Неделя:"
+    absolute = _absolute_week_number(code)
+    if absolute:
+        return f"Неделя: {code} ({absolute}-ая неделя)"
+    return f"Неделя: {code}"
+
+
+@lru_cache(maxsize=1)
 def _load_weeks() -> List[WeekInfo]:
-    raw = json.loads(WEEKS_JSON_PATH.read_text(encoding="utf-8"))
     result: List[WeekInfo] = []
-    for item in raw:
-        result.append(
-            WeekInfo(
-                code=_normalize_week_code(item["week"]),
-                map_name=item["map"],
-                mod1=item["mod1"],
-                mod2=item["mod2"],
+    for entry in _load_waves_data():
+        map_name = entry.get("name")
+        for week in entry.get("weeks", []):
+            result.append(
+                WeekInfo(
+                    code=_normalize_week_code(week.get("code")),
+                    map_name=map_name,
+                    mod1=week.get("mod1"),
+                    mod2=week.get("mod2"),
+                )
             )
-        )
+    result.sort(key=lambda item: _week_sort_key(item.code))
     return result
 
 
 @lru_cache(maxsize=1)
 def _load_spawns() -> List[dict]:
-    return json.loads(SPAWNS_JSON_PATH.read_text(encoding="utf-8"))
+    spawns: List[dict] = []
+    for entry in _load_waves_data():
+        config: dict = {
+            "map": entry.get("slug"),
+            "name": entry.get("name"),
+        }
+        numbers = entry.get("numbers")
+        if numbers:
+            config["numbers"] = numbers
+        config.update(entry.get("spawns", {}))
+        spawns.append(config)
+    return spawns
 
 
 @lru_cache(maxsize=1)
@@ -135,8 +202,78 @@ def _spawns_by_slug() -> Dict[str, dict]:
     return {
         entry["map"]: entry
         for entry in _load_spawns()
-        if "map" in entry
+        if entry.get("map")
     }
+
+
+def _write_json_atomic(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(".tmp")
+    tmp_path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    tmp_path.replace(path)
+
+
+def _session_payload(session: WavesSession) -> dict:
+    if not session.week or not session.map_slug:
+        raise ValueError("Неделя не выбрана.")
+    if not session.map_name:
+        raise ValueError("Не определено название карты.")
+    if not session.mod1 or not session.mod2:
+        raise ValueError("Не заданы модификаторы.")
+    if not _is_full(session):
+        raise ValueError("Список волн заполнен не полностью.")
+
+    absolute = _absolute_week_number(session.week)
+    waves = [
+        [spawn for spawn in wave]
+        for wave in session.waves
+    ]
+
+    return {
+        "week": str(session.week),
+        "absolute_week": absolute,
+        "slug": session.map_slug,
+        "map": session.map_name,
+        "mod1": session.mod1,
+        "mod2": session.mod2,
+        "waves": waves,
+    }
+
+
+def _load_saved_payload() -> dict:
+    raw_text = WAVES_JSON_PATH.read_text(encoding="utf-8")
+    data = json.loads(raw_text)
+    if not isinstance(data, dict):
+        raise ValueError("Ожидался объект с данными волн.")
+
+    required = ["week", "slug", "map", "mod1", "mod2", "waves"]
+    missing = [key for key in required if key not in data]
+    if missing:
+        raise ValueError(f"Отсутствуют поля: {', '.join(missing)}")
+
+    waves = data.get("waves")
+    if not isinstance(waves, list):
+        raise ValueError("Поле waves должно быть списком волн.")
+    normalized_waves: List[List[str]] = []
+    for idx, wave in enumerate(waves, start=1):
+        if not isinstance(wave, list):
+            raise ValueError(f"Волна {idx} должна быть списком спавнов.")
+        normalized_wave: List[str] = []
+        for spawn in wave:
+            if not isinstance(spawn, str):
+                raise ValueError(f"Спавн в волне {idx} должен быть строкой.")
+            normalized_wave.append(spawn)
+        if len(normalized_wave) != SPAWNS_PER_WAVE:
+            raise ValueError(f"В волне {idx} должно быть {SPAWNS_PER_WAVE} спавна.")
+        normalized_waves.append(normalized_wave)
+    if len(normalized_waves) != MAX_WAVES:
+        raise ValueError(f"Ожидается {MAX_WAVES} волн.")
+    data["waves"] = normalized_waves
+
+    return data
 
 
 def _get_weeks_by_part(part: str) -> List[WeekInfo]:
@@ -155,12 +292,9 @@ def _find_spawn_config_by_slug(slug: Optional[str]) -> Optional[dict]:
 
 
 MAP_NAME_TO_SLUG_RAW = {
-    "Берега отмщения": "shores",
-    "Кровь на снегу": "bis",
-    "Оборона деревни Аой": "aoi",
-    "Тени войны": "shadows",
-    "Сумерки и пепел": "twilight",
-    "Кровь и сталь": "bas",
+    entry["name"]: entry["slug"]
+    for entry in _load_waves_data()
+    if entry.get("name") and entry.get("slug")
 }
 MAP_NAME_TO_SLUG = {k: v for k, v in MAP_NAME_TO_SLUG_RAW.items()}
 MAP_NAME_TO_SLUG_LOWER = {k.lower(): v for k, v in MAP_NAME_TO_SLUG_RAW.items()}
@@ -301,6 +435,18 @@ def _cleanup_session(session: WavesSession, keep_message: bool = False) -> None:
         session.message_id = None
 
 
+def _build_start_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="📄 Список волн", callback_data=CB_LIST),
+        InlineKeyboardButton(text="🆕 Новый список", callback_data=CB_NEW),
+    )
+    builder.row(
+        InlineKeyboardButton(text="🚪 Выход", callback_data=CB_CANCEL),
+    )
+    return builder.as_markup()
+
+
 def _build_part_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
@@ -335,7 +481,7 @@ def _build_week_keyboard(session: WavesSession) -> InlineKeyboardMarkup:
 def _build_confirm_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="▶️ Да", callback_data=CB_CONTINUE),
+        InlineKeyboardButton(text="▶️ Продолжить", callback_data=CB_CONTINUE),
         InlineKeyboardButton(text="↩️ Назад", callback_data=CB_BACK_WEEK),
         InlineKeyboardButton(text="🚪 Выход", callback_data=CB_CANCEL),
     )
@@ -346,8 +492,11 @@ def _build_finish_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(text="🛠️ Исправить", callback_data=CB_EDIT),
-        InlineKeyboardButton(text="✅ Готово", callback_data=CB_DONE),
+        InlineKeyboardButton(text="💾 Сохранить", callback_data=CB_SAVE),
+    )
+    builder.row(
         InlineKeyboardButton(text="♻️ Сброс", callback_data=CB_RESET),
+        InlineKeyboardButton(text="🚪 Выход", callback_data=CB_CANCEL),
     )
     return builder.as_markup()
 
@@ -472,7 +621,7 @@ def _build_edit_grid(session: WavesSession) -> InlineKeyboardMarkup:
 
 def _format_wave_progress(session: WavesSession) -> str:
     lines: List[str] = [
-        f"Неделя: {session.week}",
+        _format_week_heading(session.week),
         f"Карта: {session.map_name}",
         f"Модификатор 1: {session.mod1}",
         f"Модификатор 2: {session.mod2}",
@@ -521,11 +670,11 @@ async def cmd_waves(message: Message) -> None:
     _cleanup_session(session, keep_message=False)
 
     sent = await message.answer(
-        "Выберите первую или вторую часть ротации:",
-        reply_markup=_build_part_keyboard(),
+        "Конструктор волн",
+        reply_markup=_build_start_keyboard(),
     )
     session.message_id = sent.message_id
-    session.stage = "part"
+    session.stage = "start"
 
 
 def _session_from_callback(callback: CallbackQuery) -> Optional[WavesSession]:
@@ -536,6 +685,87 @@ def _session_from_callback(callback: CallbackQuery) -> Optional[WavesSession]:
     if session and session.message_id == callback.message.message_id:
         return session
     return None
+
+
+@router.callback_query(F.data == CB_NEW)
+async def start_new_list(callback: CallbackQuery) -> None:
+    session = _session_from_callback(callback)
+    if not session:
+        await callback.answer()
+        return
+
+    _cleanup_session(session, keep_message=True)
+    session.message_id = callback.message.message_id
+    session.chat_id = callback.message.chat.id
+    session.stage = "part"
+
+    await callback.message.edit_text(
+        "Выберите первую или вторую часть ротации:",
+        reply_markup=_build_part_keyboard(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == CB_LIST)
+async def show_saved_list(callback: CallbackQuery) -> None:
+    session = _session_from_callback(callback)
+    if not session:
+        await callback.answer()
+        return
+
+    if not WAVES_JSON_PATH.exists():
+        await callback.answer("Сохранённый список ещё не создан.", show_alert=True)
+        return
+
+    try:
+        data = _load_saved_payload()
+    except FileNotFoundError:
+        await callback.answer("Сохранённый список ещё не создан.", show_alert=True)
+        return
+    except ValueError as exc:
+        await callback.answer(f"Не удалось загрузить сохранение: {exc}", show_alert=True)
+        return
+    except Exception as exc:
+        logger.exception("Ошибка загрузки waves.json: %s", exc)
+        await callback.answer("Не удалось загрузить сохранение.", show_alert=True)
+        return
+
+    slug = data.get("slug")
+    if slug not in _spawns_by_slug():
+        await callback.answer("Неизвестная карта в сохранённом файле.", show_alert=True)
+        return
+
+    _cleanup_session(session, keep_message=True)
+    session.message_id = callback.message.message_id
+    session.chat_id = callback.message.chat.id
+    week_value = str(data.get("week"))
+    session.week = week_value
+    session.part = (
+        week_value.split(".", 1)[0]
+        if isinstance(week_value, str) and "." in week_value
+        else week_value
+    )
+    session.map_slug = slug
+    session.map_name = data.get("map")
+    session.mod1 = data.get("mod1")
+    session.mod2 = data.get("mod2")
+    session.waves = [list(wave) for wave in data.get("waves", [])]
+    session.stage = "entry"
+    session.edit_mode = False
+    session.edit_target = None
+    session.edit_original = None
+    session.pending_spawn_key = None
+    session.available_weeks.clear()
+    part = session.part
+    if part:
+        weeks = _get_weeks_by_part(str(part))
+        session.available_weeks = {week.code: week for week in weeks}
+
+    await callback.message.edit_text(
+        _format_wave_progress(session),
+        reply_markup=_build_finish_keyboard(),
+    )
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith(f"{CB_PART}:"))
@@ -584,8 +814,9 @@ async def week_selected(callback: CallbackQuery) -> None:
     session.stage = "confirm"
     session.map_slug = _resolve_map_slug(week.map_name)
 
+    week_heading = _format_week_heading(week.code)
     text = (
-        f"Неделя: {week.code}\n"
+        f"{week_heading}\n"
         f"Карта: {week.map_name}\n"
         f"Модификатор 1: {week.mod1}\n"
         f"Модификатор 2: {week.mod2}\n\n"
@@ -912,9 +1143,34 @@ async def reset_waves(callback: CallbackQuery) -> None:
     await callback.answer("Список волн очищен.")
 
 
-@router.callback_query(F.data == CB_DONE)
-async def finish_placeholder(callback: CallbackQuery) -> None:
-    await callback.answer("Функция будет добавлена позже.")
+@router.callback_query(F.data == CB_SAVE)
+async def save_waves(callback: CallbackQuery) -> None:
+    session = _session_from_callback(callback)
+    if not session:
+        await callback.answer()
+        return
+
+    if session.stage != "entry":
+        await callback.answer("Сначала заполните список волн.", show_alert=True)
+        return
+
+    try:
+        payload = _session_payload(session)
+        _write_json_atomic(WAVES_JSON_PATH, payload)
+    except Exception as exc:
+        await callback.answer(f"Не удалось сохранить: {exc}", show_alert=True)
+        return
+
+    _cleanup_session(session, keep_message=True)
+    session.message_id = callback.message.message_id
+    session.chat_id = callback.message.chat.id
+
+    await callback.message.edit_text(
+        "Конструктор волн",
+        reply_markup=_build_start_keyboard(),
+    )
+
+    await callback.answer("Волны успешно сохранены", show_alert=True)
 
 
 @router.callback_query(F.data == CB_BACK)
