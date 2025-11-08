@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 # ======= ПУТЬ К ФАЙЛУ (корень проекта) =======
-WAVES_JSON_PATH = (Path(__file__).resolve().parent.parent / "waves.json")
+WAVES_JSON_PATH = (Path(__file__).resolve().parent.parent / "json" / "waves.json")
 
 # ======= ОФОРМЛЕНИЕ =======
 SEP_TOP = "━━━━━━━━━━━━━━━━━━━━"

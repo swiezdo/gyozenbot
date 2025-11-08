@@ -5,7 +5,16 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from config import BOT_TOKEN
-from handlers import gyozen, waves, miniapp, profile, inline, scheduler, group_events
+from handlers import (
+    gyozen,
+    waves,
+    waves_new,
+    miniapp,
+    profile,
+    inline,
+    scheduler,
+    group_events,
+)
 
 async def main():
     logging.basicConfig(
@@ -25,6 +34,7 @@ async def main():
         inline.router,      # inline queries - не конфликтует с message handlers
         gyozen.router,      # теперь с фильтром F.text.regexp() - не перехватывает все сообщения
         waves.router,       # команды !волны и !записатьволны
+        waves_new.router,   # новая команда /waves
         profile.router,     # команда !п
         miniapp.router,     # команды /start, /build, callback queries, reply_to_message
         group_events.router, # обработка событий выхода из группы
