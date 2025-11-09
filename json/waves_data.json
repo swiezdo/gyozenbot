@@ -11,17 +11,23 @@
       {
         "code": "1.3",
         "mod1": "Замедленное оживление",
-        "mod2": "Приспешницы Иё"
+        "mod1_icon": "slowed-revives-backdrop.svg",
+        "mod2": "Приспешницы Иё",
+        "mod2_icon": "disciples-of-iyo-hazard"
       },
       {
         "code": "2.1",
         "mod1": "Замедленное оживление",
-        "mod2": "Глаза Иё"
+        "mod1_icon": "slowed-revives-wmod.svg",
+        "mod2": "Глаза Иё",
+        "mod2_icon": "eyes-of-iyo-hazard.svg"
       },
       {
         "code": "2.5",
         "mod1": "Ограниченное исцеление",
-        "mod2": "Духи огня"
+        "mod1_icon": "reduced-healing-wmod.svg",
+        "mod2": "Духи огня",
+        "mod2_icon": "fire-spirits-hazard.svg"
       }
     ],
     "spawns": {
@@ -50,15 +56,15 @@
     },
     "mods": {
       "mod1": "Ядовитые облака",
-      "mod1_icon": "toxic.svg",
+      "mod1_icon": "toxic-clouds-backdrop.svg",
       "mod2": "Бой вслепую",
-      "mod2_icon": "blind.svg",
+      "mod2_icon": "fighting-blind-backdrop.svg",
       "mod3": "Взрыв",
-      "mod3_icon": "eruption.svg",
+      "mod3_icon": "immunity-backdrop.svg",
       "mod4": "Бой вслепую",
-      "mod4_icon": "blind.svg",
+      "mod4_icon": "fighting-blind-backdrop.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "eruption.svg"
+      "mod5_icon": "immunity-backdrop.svg"
     }
   },
   {
@@ -72,12 +78,16 @@
       {
         "code": "1.6",
         "mod1": "Недостаток орудий",
-        "mod2": "Глаза Иё"
+        "mod1_icon": "tool-shortage-backdrop.svg",
+        "mod2": "Глаза Иё",
+        "mod2_icon": "eyes-of-iyo-hazard.svg"
       },
       {
         "code": "2.4",
         "mod1": "Скованный",
-        "mod2": "Приспешницы Иё"
+        "mod1_icon": "incapacitated-wmod.svg",
+        "mod2": "Приспешницы Иё",
+        "mod2_icon": "disciples-of-iyo-hazard"
       }
     ],
     "spawns": {
@@ -113,15 +123,15 @@
     },
     "mods": {
       "mod1": "Бой вслепую",
-      "mod1_icon": "blind.svg",
+      "mod1_icon": "fighting-blind-backdrop.svg",
       "mod2": "Замедленные оживления",
-      "mod2_icon": "revives.svg",
+      "mod2_icon": "slowed-revives-backdrop.svg",
       "mod3": "Горящие клинки",
-      "mod3_icon": "blades.svg",
+      "mod3_icon": "burning-blades-backdrop.svg",
       "mod4": "Ядовитые облака",
-      "mod4_icon": "toxic.svg",
+      "mod4_icon": "toxic-clouds-backdrop.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "eruption.svg"
+      "mod5_icon": "immunity-backdrop.svg"
     }
   },
   {
@@ -135,12 +145,16 @@
       {
         "code": "1.2",
         "mod1": "Неуязвимость",
-        "mod2": "Духи огня"
+        "mod1_icon": "immunity-backdrop.svg",
+        "mod2": "Духи огня",
+        "mod2_icon": "fire-spirits-hazard.svg"
       },
       {
         "code": "2.2",
         "mod1": "Скованный",
-        "mod2": "Духи огня"
+        "mod1_icon": "incapacitated-wmod.svg",
+        "mod2": "Духи огня",
+        "mod2_icon": "fire-spirits-hazard.svg"
       }
     ],
     "spawns": {
@@ -169,13 +183,13 @@
       "mod1": "Лесной пожар",
       "mod1_icon": "wildfire.svg",
       "mod2": "Взрыв",
-      "mod2_icon": "eruption.svg",
+      "mod2_icon": "immunity-backdrop.svg",
       "mod3": "Бой вслепую",
-      "mod3_icon": "blind.svg",
+      "mod3_icon": "fighting-blind-backdrop.svg",
       "mod4": "Горящие клинки",
-      "mod4_icon": "blades.svg",
+      "mod4_icon": "burning-blades-backdrop.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "eruption.svg"
+      "mod5_icon": "immunity-backdrop.svg"
     }
   },
   {
@@ -190,17 +204,23 @@
       {
         "code": "1.4",
         "mod1": "Ограниченное исцеление",
-        "mod2": "Глаза Иё"
+        "mod1_icon": "reduced-healing-wmod.svg",
+        "mod2": "Глаза Иё",
+        "mod2_icon": "eyes-of-iyo-hazard.svg"
       },
       {
         "code": "1.7",
         "mod1": "Ограниченное исцеление",
-        "mod2": "Духи огня"
+        "mod1_icon": "reduced-healing-wmod.svg",
+        "mod2": "Духи огня",
+        "mod2_icon": "fire-spirits-hazard.svg"
       },
       {
         "code": "2.6",
         "mod1": "Усиленные враги",
-        "mod2": "Глаза Иё"
+        "mod1_icon": "empowered-foes-wmod.svg",
+        "mod2": "Глаза Иё",
+        "mod2_icon": "eyes-of-iyo-hazard.svg"
       }
     ],
     "spawns": {
@@ -239,15 +259,15 @@
     },
     "mods": {
       "mod1": "Бой вслепую",
-      "mod1_icon": "blind.svg",
+      "mod1_icon": "fighting-blind-backdrop.svg",
       "mod2": "Горящие клинки",
-      "mod2_icon": "blades.svg",
+      "mod2_icon": "burning-blades-backdrop.svg",
       "mod3": "Ядовитые облака",
-      "mod3_icon": "toxic.svg",
+      "mod3_icon": "toxic-clouds-backdrop.svg",
       "mod4": "Лесной пожар",
       "mod4_icon": "wildfire.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "eruption.svg"
+      "mod5_icon": "immunity-backdrop.svg"
     }
   },
   {
@@ -262,17 +282,23 @@
       {
         "code": "1.1",
         "mod1": "Недостаток орудий",
-        "mod2": "Глаза Иё"
+        "mod1_icon": "tool-shortage-backdrop.svg",
+        "mod2": "Глаза Иё",
+        "mod2_icon": "eyes-of-iyo-hazard.svg"
       },
       {
         "code": "1.8",
         "mod1": "Усиленные враги",
-        "mod2": "Приспешницы Иё"
+        "mod1_icon": "empowered-foes-wmod.svg",
+        "mod2": "Приспешницы Иё",
+        "mod2_icon": "disciples-of-iyo-hazard"
       },
       {
         "code": "2.8",
         "mod1": "Замедленное оживление",
-        "mod2": "Приспешницы Иё"
+        "mod1_icon": "slowed-revives-wmod.svg",
+        "mod2": "Приспешницы Иё",
+        "mod2_icon": "disciples-of-iyo-hazard"
       }
     ],
     "spawns": {
@@ -304,15 +330,15 @@
     },
     "mods": {
       "mod1": "Взрыв",
-      "mod1_icon": "eruption.svg",
+      "mod1_icon": "immunity-backdrop.svg",
       "mod2": "Ядовитые облака",
-      "mod2_icon": "toxic.svg",
+      "mod2_icon": "toxic-clouds-backdrop.svg",
       "mod3": "Горящие клинки",
-      "mod3_icon": "blades.svg",
+      "mod3_icon": "burning-blades-backdrop.svg",
       "mod4": "Лесной пожар",
       "mod4_icon": "wildfire.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "eruption.svg"
+      "mod5_icon": "immunity-backdrop.svg"
     }
   },
   {
@@ -327,17 +353,23 @@
       {
         "code": "1.5",
         "mod1": "Скованный",
-        "mod2": "Приспешницы Иё"
+        "mod1_icon": "incapacitated-wmod.svg",
+        "mod2": "Приспешницы Иё",
+        "mod2_icon": "disciples-of-iyo-hazard"
       },
       {
         "code": "2.3",
         "mod1": "Усиленные враги",
-        "mod2": "Глаза Иё"
+        "mod1_icon": "empowered-foes-wmod.svg",
+        "mod2": "Глаза Иё",
+        "mod2_icon": "eyes-of-iyo-hazard.svg"
       },
       {
         "code": "2.7",
         "mod1": "Скованный",
-        "mod2": "Духи огня"
+        "mod1_icon": "incapacitated-wmod.svg",
+        "mod2": "Духи огня",
+        "mod2_icon": "fire-spirits-hazard.svg"
       }
     ],
     "spawns": {
@@ -373,15 +405,15 @@
     },
     "mods": {
       "mod1": "Ядовитые облака",
-      "mod1_icon": "toxic.svg",
+      "mod1_icon": "toxic-clouds-backdrop.svg",
       "mod2": "Лесной пожар",
       "mod2_icon": "wildfire.svg",
       "mod3": "Бой вслепую",
-      "mod3_icon": "blind.svg",
+      "mod3_icon": "fighting-blind-backdrop.svg",
       "mod4": "Неуязвимость",
-      "mod4_icon": "immunity.svg",
+      "mod4_icon": "immunity-backdrop.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "eruption.svg"
+      "mod5_icon": "immunity-backdrop.svg"
     }
   }
 ]
