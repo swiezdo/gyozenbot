@@ -31,9 +31,9 @@
    - Работает только в разрешенных группах (GROUP_ID, TROPHY_GROUP_CHAT_ID)
    - Отправляет скриншот профиля через API endpoint `/api/send_profile/{user_id}`
 
-4. **waves.py** - Команды `!волны` и `!записатьволны`
-   - Работает с файлом `json/waves.json`
-   - Только для администраторов
+4. **waves_new.py** - Интерфейс новой команды `/waves`
+   - Работает с данными из `json/waves.json` и `json/waves_data.json`
+   - Управляет сессиями редактирования через callback кнопки
 
 5. **inline.py** - Inline queries для поиска билдов
    - Не конфликтует с message handlers
@@ -146,9 +146,9 @@ gyozenbot/
 │   ├── gyozen.py          # Диалоги с Гёдзеном
 │   ├── miniapp.py         # Интеграция с Mini App
 │   ├── profile.py         # Команда !п (профили)
-│   ├── waves.py           # Команды !волны
 │   ├── inline.py          # Inline queries
-│   └── scheduler.py       # Планировщик приветствий
+│   ├── scheduler.py       # Планировщик приветствий
+│   └── waves_new.py       # Команда /waves
 ├── main.py                # Главный файл запуска
 ├── config.py              # Конфигурация
 ├── ai_client.py           # AI клиент
