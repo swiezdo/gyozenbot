@@ -34,14 +34,19 @@
     "objectives": {
       "objective1": "Выполните контратаки при идеальном парировании.",
       "objective1_icon": "parry.svg",
+      "objective1_num": 15,
       "objective2": "Победите врагов вне областей обороны.",
       "objective2_icon": "outside.svg",
+      "objective2_num": 25,
       "objective3": "Тихо убейте врагов с высоты.",
       "objective3_icon": "above.svg",
+      "objective3_num": 30,
       "objective4": "Победите врагов в дальнем бою.",
       "objective4_icon": "ranged.svg",
+      "objective4_num": 20,
       "objective5": "Победите врагов, нанося им урон огнём.",
-      "objective5_icon": "fire.svg"
+      "objective5_icon": "fire.svg",
+      "objective5_num": 15
     },
     "mods": {
       "mod1": "Ядовитые облака",
@@ -92,14 +97,19 @@
     "objectives": {
       "objective1": "Выполните тихие убийства или критические удары.",
       "objective1_icon": "assassinations.svg",
+      "objective1_num": 10,
       "objective2": "Победите врагов в областях обороны.",
       "objective2_icon": "inside.svg",
+      "objective2_num": 25,
       "objective3": "Убейте врагов попаданием в голову с расстояния.",
       "objective3_icon": "headshots.svg",
+      "objective3_num": 25,
       "objective4": "Тихо убейте врагов с высоты.",
       "objective4_icon": "above.svg",
+      "objective4_num": 5,
       "objective5": "Выполните контратаки при идеальном парировании.",
-      "objective5_icon": "parry.svg"
+      "objective5_icon": "parry.svg",
+      "objective5_num": 15
     },
     "mods": {
       "mod1": "Бой вслепую",
@@ -141,14 +151,19 @@
     "objectives": {
       "objective1": "Убейте врагов попаданием в голову с расстояния.",
       "objective1_icon": "headshots.svg",
+      "objective1_num": 25,
       "objective2": "Победите врагов в областях обороны.",
       "objective2_icon": "inside.svg",
+      "objective2_num": 25,
       "objective3": "Победите врагов с помощью орудий Призрака.",
       "objective3_icon": "weapon.svg",
+      "objective3_num": 5,
       "objective4": "Победите врагов, нанося им урон огнём.",
       "objective4_icon": "fire.svg",
+      "objective4_num": 15,
       "objective5": "Победите врагов вне областей обороны.",
-      "objective5_icon": "outside.svg"
+      "objective5_icon": "outside.svg",
+      "objective5_num": 25
     },
     "mods": {
       "mod1": "Лесной пожар",
@@ -208,14 +223,19 @@
     "objectives": {
       "objective1": "Убейте врагов попаданием в голову с расстояния.",
       "objective1_icon": "headshots.svg",
+      "objective1_num": 25,
       "objective2": "Победите врагов в областях обороны.",
       "objective2_icon": "inside.svg",
+      "objective2_num": 25,
       "objective3": "Победите врагов с помощью орудий Призрака.",
       "objective3_icon": "weapon.svg",
+      "objective3_num": 5,
       "objective4": "Победите врагов, нанося им урон огнём.",
       "objective4_icon": "fire.svg",
+      "objective4_num": 15,
       "objective5": "Победите врагов вне областей обороны.",
-      "objective5_icon": "outside.svg"
+      "objective5_icon": "outside.svg",
+      "objective5_num": 25
     },
     "mods": {
       "mod1": "Бой вслепую",
@@ -268,14 +288,19 @@
     "objectives": {
       "objective1": "Победите врагов в дальнем бою.",
       "objective1_icon": "ranged.svg",
+      "objective1_num": 20,
       "objective2": "Победите врагов в областях обороны.",
       "objective2_icon": "inside.svg",
+      "objective2_num": 25,
       "objective3": "Победите врагов с помощью орудий Призрака.",
       "objective3_icon": "weapon.svg",
+      "objective3_num": 5,
       "objective4": "Выполните тихие убийства или критические удары.",
       "objective4_icon": "assassinations.svg",
+      "objective4_num": 10,
       "objective5": "Убейте врагов попаданием в голову с расстояния.",
-      "objective5_icon": "headshots.svg"
+      "objective5_icon": "headshots.svg",
+      "objective5_num": 25
     },
     "mods": {
       "mod1": "Взрыв",
@@ -332,14 +357,19 @@
     "objectives": {
       "objective1": "Убейте врагов попаданием в голову с расстояния.",
       "objective1_icon": "headshots.svg",
+      "objective1_num": 25,
       "objective2": "Тихо убейте врагов с высоты.",
       "objective2_icon": "above.svg",
+      "objective2_num": 5,
       "objective3": "Победите врагов, нанося им урон огнём.",
       "objective3_icon": "fire.svg",
+      "objective3_num": 15,
       "objective4": "Победите врагов вне областей обороны.",
       "objective4_icon": "outside.svg",
+      "objective4_num": 25,
       "objective5": "Победите врагов с помощью орудий Призрака.",
-      "objective5_icon": "weapon.svg"
+      "objective5_icon": "weapon.svg",
+      "objective5_num": 5
     },
     "mods": {
       "mod1": "Ядовитые облака",
