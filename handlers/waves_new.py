@@ -64,6 +64,8 @@ class WeekInfo:
     map_name: str
     mod1: str
     mod2: str
+    mod1_icon: Optional[str] = None
+    mod2_icon: Optional[str] = None
 
 
 @dataclass
@@ -77,6 +79,8 @@ class WavesSession:
     map_name: Optional[str] = None
     mod1: Optional[str] = None
     mod2: Optional[str] = None
+    mod1_icon: Optional[str] = None
+    mod2_icon: Optional[str] = None
     map_slug: Optional[str] = None
     spawn_lookup: Dict[str, str] = field(default_factory=dict)
     pending_spawn_key: Optional[str] = None
@@ -93,6 +97,8 @@ class WavesSession:
         self.map_name = None
         self.mod1 = None
         self.mod2 = None
+        self.mod1_icon = None
+        self.mod2_icon = None
         self.map_slug = None
         self.spawn_lookup.clear()
         self.pending_spawn_key = None
@@ -176,6 +182,8 @@ def _load_weeks() -> List[WeekInfo]:
                     map_name=map_name,
                     mod1=week.get("mod1"),
                     mod2=week.get("mod2"),
+                    mod1_icon=week.get("mod1_icon"),
+                    mod2_icon=week.get("mod2_icon"),
                 )
             )
     result.sort(key=lambda item: _week_sort_key(item.code))
@@ -244,6 +252,10 @@ def _session_payload(session: WavesSession) -> dict:
         "mod2": session.mod2,
         "waves": waves,
     }
+    if session.mod1_icon:
+        payload["mod1_icon"] = session.mod1_icon
+    if session.mod2_icon:
+        payload["mod2_icon"] = session.mod2_icon
 
     numbers = metadata.get("numbers")
     if numbers:
@@ -771,6 +783,8 @@ async def show_saved_list(callback: CallbackQuery) -> None:
     session.map_name = data.get("map")
     session.mod1 = data.get("mod1")
     session.mod2 = data.get("mod2")
+    session.mod1_icon = data.get("mod1_icon")
+    session.mod2_icon = data.get("mod2_icon")
     session.waves = [list(wave) for wave in data.get("waves", [])]
     session.stage = "entry"
     session.edit_mode = False
@@ -833,6 +847,8 @@ async def week_selected(callback: CallbackQuery) -> None:
     session.map_name = week.map_name
     session.mod1 = week.mod1
     session.mod2 = week.mod2
+    session.mod1_icon = week.mod1_icon
+    session.mod2_icon = week.mod2_icon
     session.stage = "confirm"
     session.map_slug = _resolve_map_slug(week.map_name)
 
@@ -868,6 +884,8 @@ async def back_to_week(callback: CallbackQuery) -> None:
     session.map_name = None
     session.mod1 = None
     session.mod2 = None
+    session.mod1_icon = None
+    session.mod2_icon = None
     session.map_slug = None
 
     await callback.message.edit_text(
@@ -890,6 +908,8 @@ async def back_to_part(callback: CallbackQuery) -> None:
     session.map_name = None
     session.mod1 = None
     session.mod2 = None
+    session.mod1_icon = None
+    session.mod2_icon = None
     session.map_slug = None
     session.available_weeks.clear()
 
