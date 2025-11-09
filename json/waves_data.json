@@ -60,11 +60,11 @@
       "mod2": "Бой вслепую",
       "mod2_icon": "fighting-blind-backdrop.svg",
       "mod3": "Взрыв",
-      "mod3_icon": "immunity-backdrop.svg",
+      "mod3_icon": "eruption-backdrop.svg",
       "mod4": "Бой вслепую",
       "mod4_icon": "fighting-blind-backdrop.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "immunity-backdrop.svg"
+      "mod5_icon": "eruption-backdrop.svg"
     }
   },
   {
@@ -131,7 +131,7 @@
       "mod4": "Ядовитые облака",
       "mod4_icon": "toxic-clouds-backdrop.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "immunity-backdrop.svg"
+      "mod5_icon": "eruption-backdrop.svg"
     }
   },
   {
@@ -183,13 +183,13 @@
       "mod1": "Лесной пожар",
       "mod1_icon": "wildfire.svg",
       "mod2": "Взрыв",
-      "mod2_icon": "immunity-backdrop.svg",
+      "mod2_icon": "eruption-backdrop.svg",
       "mod3": "Бой вслепую",
       "mod3_icon": "fighting-blind-backdrop.svg",
       "mod4": "Горящие клинки",
       "mod4_icon": "burning-blades-backdrop.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "immunity-backdrop.svg"
+      "mod5_icon": "eruption-backdrop.svg"
     }
   },
   {
@@ -267,7 +267,7 @@
       "mod4": "Лесной пожар",
       "mod4_icon": "wildfire.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "immunity-backdrop.svg"
+      "mod5_icon": "eruption-backdrop.svg"
     }
   },
   {
@@ -330,7 +330,7 @@
     },
     "mods": {
       "mod1": "Взрыв",
-      "mod1_icon": "immunity-backdrop.svg",
+      "mod1_icon": "eruption-backdrop.svg",
       "mod2": "Ядовитые облака",
       "mod2_icon": "toxic-clouds-backdrop.svg",
       "mod3": "Горящие клинки",
@@ -338,7 +338,7 @@
       "mod4": "Лесной пожар",
       "mod4_icon": "wildfire.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "immunity-backdrop.svg"
+      "mod5_icon": "eruption-backdrop.svg"
     }
   },
   {
@@ -413,7 +413,7 @@
       "mod4": "Неуязвимость",
       "mod4_icon": "immunity-backdrop.svg",
       "mod5": "Взрыв",
-      "mod5_icon": "immunity-backdrop.svg"
+      "mod5_icon": "eruption-backdrop.svg"
     }
   }
 ]
