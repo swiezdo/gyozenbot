@@ -1,5 +1,6 @@
 import json
 import logging
+from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -232,7 +233,9 @@ def _session_payload(session: WavesSession) -> dict:
         for wave in session.waves
     ]
 
-    return {
+    metadata = MAP_METADATA_BY_SLUG.get(session.map_slug, {})
+
+    payload: dict = {
         "week": str(session.week),
         "absolute_week": absolute,
         "slug": session.map_slug,
@@ -241,6 +244,20 @@ def _session_payload(session: WavesSession) -> dict:
         "mod2": session.mod2,
         "waves": waves,
     }
+
+    numbers = metadata.get("numbers")
+    if numbers:
+        payload["numbers"] = deepcopy(numbers)
+
+    objectives = metadata.get("objectives")
+    if objectives:
+        payload["objectives"] = deepcopy(objectives)
+
+    mods = metadata.get("mods")
+    if mods:
+        payload["mods"] = deepcopy(mods)
+
+    return payload
 
 
 def _load_saved_payload() -> dict:
@@ -298,6 +315,11 @@ MAP_NAME_TO_SLUG_RAW = {
 }
 MAP_NAME_TO_SLUG = {k: v for k, v in MAP_NAME_TO_SLUG_RAW.items()}
 MAP_NAME_TO_SLUG_LOWER = {k.lower(): v for k, v in MAP_NAME_TO_SLUG_RAW.items()}
+MAP_METADATA_BY_SLUG = {
+    entry["slug"]: entry
+    for entry in _load_waves_data()
+    if entry.get("slug")
+}
 
 
 def _resolve_map_slug(map_name: Optional[str]) -> Optional[str]:

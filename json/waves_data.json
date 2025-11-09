@@ -30,6 +30,30 @@
       "spawn3": "Усадьба",
       "spawn4": "Лес",
       "spawn5": "Поле"
+    },
+    "objectives": {
+      "objective1": "Выполните контратаки при идеальном парировании.",
+      "objective1_icon": "parry.svg",
+      "objective2": "Победите врагов вне областей обороны.",
+      "objective2_icon": "outside.svg",
+      "objective3": "Тихо убейте врагов с высоты.",
+      "objective3_icon": "above.svg",
+      "objective4": "Победите врагов в дальнем бою.",
+      "objective4_icon": "ranged.svg",
+      "objective5": "Победите врагов, нанося им урон огнём.",
+      "objective5_icon": "fire.svg"
+    },
+    "mods": {
+      "mod1": "Ядовитые облака",
+      "mod1_icon": "toxic.svg",
+      "mod2": "Бой вслепую",
+      "mod2_icon": "blind.svg",
+      "mod3": "Взрыв",
+      "mod3_icon": "eruption.svg",
+      "mod4": "Бой вслепую",
+      "mod4_icon": "blind.svg",
+      "mod5": "Взрыв",
+      "mod5_icon": "eruption.svg"
     }
   },
   {
@@ -64,6 +88,30 @@
       "spawn3_type2": "Лево - Остров",
       "spawn3_type2_alias": "Лево О",
       "spawn4": "Право"
+    },
+    "objectives": {
+      "objective1": "Выполните тихие убийства или критические удары.",
+      "objective1_icon": "assassinations.svg",
+      "objective2": "Победите врагов в областях обороны.",
+      "objective2_icon": "inside.svg",
+      "objective3": "Убейте врагов попаданием в голову с расстояния.",
+      "objective3_icon": "headshots.svg",
+      "objective4": "Тихо убейте врагов с высоты.",
+      "objective4_icon": "above.svg",
+      "objective5": "Выполните контратаки при идеальном парировании.",
+      "objective5_icon": "parry.svg"
+    },
+    "mods": {
+      "mod1": "Бой вслепую",
+      "mod1_icon": "blind.svg",
+      "mod2": "Замедленные оживления",
+      "mod2_icon": "revives.svg",
+      "mod3": "Горящие клинки",
+      "mod3_icon": "blades.svg",
+      "mod4": "Ядовитые облака",
+      "mod4_icon": "toxic.svg",
+      "mod5": "Взрыв",
+      "mod5_icon": "eruption.svg"
     }
   },
   {
@@ -89,6 +137,30 @@
       "spawn1": "Застава",
       "spawn2": "Рудник",
       "spawn3": "Лагерь"
+    },
+    "objectives": {
+      "objective1": "Убейте врагов попаданием в голову с расстояния.",
+      "objective1_icon": "headshots.svg",
+      "objective2": "Победите врагов в областях обороны.",
+      "objective2_icon": "inside.svg",
+      "objective3": "Победите врагов с помощью орудий Призрака.",
+      "objective3_icon": "weapon.svg",
+      "objective4": "Победите врагов, нанося им урон огнём.",
+      "objective4_icon": "fire.svg",
+      "objective5": "Победите врагов вне областей обороны.",
+      "objective5_icon": "outside.svg"
+    },
+    "mods": {
+      "mod1": "Лесной пожар",
+      "mod1_icon": "wildfire.svg",
+      "mod2": "Взрыв",
+      "mod2_icon": "eruption.svg",
+      "mod3": "Бой вслепую",
+      "mod3_icon": "blind.svg",
+      "mod4": "Горящие клинки",
+      "mod4_icon": "blades.svg",
+      "mod5": "Взрыв",
+      "mod5_icon": "eruption.svg"
     }
   },
   {
@@ -132,6 +204,30 @@
       "spawn3_type2_alias": "Додзё D",
       "spawn3_type3": "Додзё - Право",
       "spawn3_type3_alias": "Додзё R"
+    },
+    "objectives": {
+      "objective1": "Убейте врагов попаданием в голову с расстояния.",
+      "objective1_icon": "headshots.svg",
+      "objective2": "Победите врагов в областях обороны.",
+      "objective2_icon": "inside.svg",
+      "objective3": "Победите врагов с помощью орудий Призрака.",
+      "objective3_icon": "weapon.svg",
+      "objective4": "Победите врагов, нанося им урон огнём.",
+      "objective4_icon": "fire.svg",
+      "objective5": "Победите врагов вне областей обороны.",
+      "objective5_icon": "outside.svg"
+    },
+    "mods": {
+      "mod1": "Бой вслепую",
+      "mod1_icon": "blind.svg",
+      "mod2": "Горящие клинки",
+      "mod2_icon": "blades.svg",
+      "mod3": "Ядовитые облака",
+      "mod3_icon": "toxic.svg",
+      "mod4": "Лесной пожар",
+      "mod4_icon": "wildfire.svg",
+      "mod5": "Взрыв",
+      "mod5_icon": "eruption.svg"
     }
   },
   {
@@ -168,6 +264,30 @@
       "spawn2": "Хижина",
       "spawn3": "Корабль",
       "spawn4": "Пляж"
+    },
+    "objectives": {
+      "objective1": "Победите врагов в дальнем бою.",
+      "objective1_icon": "ranged.svg",
+      "objective2": "Победите врагов в областях обороны.",
+      "objective2_icon": "inside.svg",
+      "objective3": "Победите врагов с помощью орудий Призрака.",
+      "objective3_icon": "weapon.svg",
+      "objective4": "Выполните тихие убийства или критические удары.",
+      "objective4_icon": "assassinations.svg",
+      "objective5": "Убейте врагов попаданием в голову с расстояния.",
+      "objective5_icon": "headshots.svg"
+    },
+    "mods": {
+      "mod1": "Взрыв",
+      "mod1_icon": "eruption.svg",
+      "mod2": "Ядовитые облака",
+      "mod2_icon": "toxic.svg",
+      "mod3": "Горящие клинки",
+      "mod3_icon": "blades.svg",
+      "mod4": "Лесной пожар",
+      "mod4_icon": "wildfire.svg",
+      "mod5": "Взрыв",
+      "mod5_icon": "eruption.svg"
     }
   },
   {
@@ -208,6 +328,30 @@
       "spawn4_type1_alias": "Болдер М",
       "spawn4_type2": "Болдер - Утёс",
       "spawn4_type2_alias": "Болдер У"
+    },
+    "objectives": {
+      "objective1": "Убейте врагов попаданием в голову с расстояния.",
+      "objective1_icon": "headshots.svg",
+      "objective2": "Тихо убейте врагов с высоты.",
+      "objective2_icon": "above.svg",
+      "objective3": "Победите врагов, нанося им урон огнём.",
+      "objective3_icon": "fire.svg",
+      "objective4": "Победите врагов вне областей обороны.",
+      "objective4_icon": "outside.svg",
+      "objective5": "Победите врагов с помощью орудий Призрака.",
+      "objective5_icon": "weapon.svg"
+    },
+    "mods": {
+      "mod1": "Ядовитые облака",
+      "mod1_icon": "toxic.svg",
+      "mod2": "Лесной пожар",
+      "mod2_icon": "wildfire.svg",
+      "mod3": "Бой вслепую",
+      "mod3_icon": "blind.svg",
+      "mod4": "Неуязвимость",
+      "mod4_icon": "immunity.svg",
+      "mod5": "Взрыв",
+      "mod5_icon": "eruption.svg"
     }
   }
 ]
