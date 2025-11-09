@@ -14,6 +14,7 @@ from handlers import (
     inline,
     scheduler,
     group_events,
+    waves_preview,
 )
 
 async def main():
@@ -35,6 +36,7 @@ async def main():
         gyozen.router,      # теперь с фильтром F.text.regexp() - не перехватывает все сообщения
         waves_new.router,   # новая команда /waves
         profile.router,     # команда !п
+        waves_preview.router,  # команда !волны
         miniapp.router,     # команды /start, /build, callback queries, reply_to_message
         group_events.router, # обработка событий выхода из группы
     )
