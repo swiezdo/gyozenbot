@@ -246,7 +246,7 @@ async def approve_mastery_callback(callback: CallbackQuery):
                         original_text = callback.message.text or callback.message.caption or ""
                         updated_text = original_text + f"\n\n✅ Заявка одобрена @{moderator_username}"
                         
-                        if callback.message.photo:
+                        if callback.message.photo or callback.message.video:
                             await callback.message.edit_caption(
                                 caption=updated_text,
                                 parse_mode="HTML",
@@ -318,7 +318,7 @@ async def reject_mastery_callback(callback: CallbackQuery):
             'original_message_id': callback.message.message_id,
             'instruction_message_id': instruction_msg.message_id,
             'chat_id': callback.message.chat.id,
-            'has_photo': callback.message.photo is not None,
+            'has_photo': (callback.message.photo is not None) or (callback.message.video is not None),
             'original_text': original_text,
             'moderator_username': moderator_username
         }
@@ -617,7 +617,7 @@ async def approve_trophy_callback(callback: CallbackQuery):
                         original_text = callback.message.text or callback.message.caption or ""
                         updated_text = original_text + f"\n\n✅ Заявка одобрена @{moderator_username}"
                         
-                        if callback.message.photo:
+                        if callback.message.photo or callback.message.video:
                             await callback.message.edit_caption(
                                 caption=updated_text,
                                 parse_mode="HTML",
@@ -687,7 +687,7 @@ async def reject_trophy_callback(callback: CallbackQuery):
             'original_message_id': callback.message.message_id,
             'instruction_message_id': instruction_msg.message_id,
             'chat_id': callback.message.chat.id,
-            'has_photo': callback.message.photo is not None,
+            'has_photo': (callback.message.photo is not None) or (callback.message.video is not None),
             'original_text': original_text,
             'moderator_username': moderator_username
         }
