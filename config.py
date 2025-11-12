@@ -48,7 +48,7 @@ OPENAI_API_KEY   = os.getenv("OPENAI_API_KEY", "")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 
 # --- Мини-приложение ----------------------------------------
-MINI_APP_URL = "https://swiezdo.github.io/tsushimaru_app/"
+MINI_APP_URL = "https://tsushimaru.com/"
 API_BASE_URL = "https://api.tsushimaru.com"
 
 # --- Константы для тем -------------------------------------
