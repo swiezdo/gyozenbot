@@ -90,10 +90,14 @@ async def profile_command(message: Message):
             if response.status == 404:
                 logger.info("Профиль пользователя %s не найден", target_user_id)
                 await message.reply("❌ Профиль не найден")
-            return
-        
+                return
+
             if response.status != 200:
-                logger.error("Неожиданный ответ API /api/user_info/%s: %s", target_user_id, response.status)
+                logger.error(
+                    "Неожиданный ответ API /api/user_info/%s: %s",
+                    target_user_id,
+                    response.status,
+                )
                 await message.reply("❌ Ошибка при проверке профиля")
                 return
 
