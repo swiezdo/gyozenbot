@@ -1,15 +1,10 @@
 # /gyozenbot/handlers/profile.py
-import sys
 import logging
-import requests
 from aiogram import Router, F
 from aiogram.types import Message
 
-# Добавляем путь к miniapp_api для импорта db модуля
-sys.path.append('/root/miniapp_api')
-from db import get_user
-
-from config import GROUP_ID, LEGENDS_TOPIC_FIRST_MESSAGE, API_BASE_URL, TROPHY_GROUP_CHAT_ID
+from config import GROUP_ID, LEGENDS_TOPIC_FIRST_MESSAGE, TROPHY_GROUP_CHAT_ID
+from api_client import api_get, api_post
 
 # Разрешенные группы для команды !п
 ALLOWED_GROUP_IDS = [
@@ -18,9 +13,6 @@ ALLOWED_GROUP_IDS = [
 ]
 
 router = Router()
-
-# Путь к базе данных miniapp_api
-DB_PATH = "/root/miniapp_api/app.db"
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -92,53 +84,44 @@ async def profile_command(message: Message):
         target_user_id = _get_target_user_id(message)
         logger.info(f"Целевой пользователь для команды !п: {target_user_id}")
         
-        # Получаем профиль из БД для проверки существования
-        logger.info(f"Запрашиваем профиль пользователя {target_user_id} из БД {DB_PATH}")
-        profile_data = get_user(DB_PATH, target_user_id)
-        
-        if not profile_data:
-            error_msg = "❌ Профиль не найден"
-            await message.reply(error_msg)
+        # Проверяем наличие пользователя через API
+        response_wrapper = await api_get(f"/api/user_info/{target_user_id}")
+        async with response_wrapper as response:
+            if response.status == 404:
+                logger.info("Профиль пользователя %s не найден", target_user_id)
+                await message.reply("❌ Профиль не найден")
             return
         
-        # Подготавливаем параметры для API запроса
-        chat_id = str(message.chat.id)
-        message_thread_id = message.message_thread_id if message.is_topic_message else None
-        
-        # Определяем URL API (используем значение из config, fallback на localhost)
-        api_url = API_BASE_URL or "http://localhost:8000"
-        if not api_url.startswith("http"):
-            api_url = "http://localhost:8000"
-        
-        endpoint_url = f"{api_url}/api/send_profile/{target_user_id}"
-        
-        # Параметры запроса
+            if response.status != 200:
+                logger.error("Неожиданный ответ API /api/user_info/%s: %s", target_user_id, response.status)
+                await message.reply("❌ Ошибка при проверке профиля")
+                return
+
         params = {
-            "chat_id": chat_id,
-            "base_url": api_url
+            "chat_id": str(message.chat.id),
         }
-        if message_thread_id:
-            params["message_thread_id"] = message_thread_id
+        if message.is_topic_message:
+            params["message_thread_id"] = message.message_thread_id
+
+        response_wrapper = await api_post(f"/api/send_profile/{target_user_id}", params=params)
+        async with response_wrapper as response:
+            if response.status == 200:
+                logger.info("Скриншот профиля отправлен ботом для %s", target_user_id)
+                return
+
+            try:
+                payload = await response.json()
+                detail = payload.get("detail", "Unknown error")
+            except Exception:
+                detail = await response.text()
+
+            logger.error(
+                "Ошибка API при отправке скриншота профиля: %s - %s",
+                response.status,
+                detail,
+            )
+            await message.reply(f"❌ Ошибка при создании скриншота профиля: {detail}")
         
-        logger.info(f"Вызываем API endpoint: {endpoint_url} с параметрами: {params}")
-        
-        # Вызываем API endpoint
-        response = requests.post(endpoint_url, params=params, timeout=60)
-        
-        if response.status_code == 200:
-            result = response.json()
-            logger.info(f"Скриншот профиля успешно отправлен: {result.get('message', 'OK')}")
-            # Не отправляем дополнительное сообщение, фото уже отправлено
-        else:
-            error_detail = response.json().get('detail', 'Unknown error') if response.status_code < 500 else response.text
-            logger.error(f"Ошибка API при отправке скриншота: {response.status_code} - {error_detail}")
-            error_msg = f"❌ Ошибка при создании скриншота профиля: {error_detail}"
-            await message.reply(error_msg)
-        
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Ошибка запроса к API: {str(e)}", exc_info=True)
-        error_msg = f"❌ Ошибка при обращении к API: {str(e)}"
-        await message.reply(error_msg)
     except Exception as e:
         # Обработка других ошибок
         logger.error(f"Ошибка при обработке команды !п: {str(e)}", exc_info=True)

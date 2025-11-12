@@ -1,17 +1,10 @@
 # /gyozenbot/handlers/group_events.py
-import sys
 import logging
 from aiogram import Router, F
 from aiogram.types import ChatMemberUpdated
 
-# Добавляем путь к miniapp_api для импорта db модуля
-sys.path.append('/root/miniapp_api')
-from db import delete_user_all_data
-
 from config import GROUP_ID
-
-# Путь к базе данных miniapp_api
-DB_PATH = "/root/miniapp_api/app.db"
+from api_client import api_delete
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -39,19 +32,30 @@ async def handle_member_left(event: ChatMemberUpdated):
             )
             
             try:
-                # Удаляем все данные пользователя
-                success = delete_user_all_data(DB_PATH, user_id)
-                
-                if success:
-                    logger.info(
-                        f"Успешно удалены все данные пользователя {user_id} "
-                        f"из базы данных и файлов на сервере"
-                    )
-                else:
-                    logger.error(
-                        f"Ошибка при удалении данных пользователя {user_id}. "
-                        f"Возможно, пользователь не найден в базе данных."
-                    )
+                response_wrapper = await api_delete(
+                    f"/api/users/{user_id}",
+                    use_bot_token=True,
+                )
+                async with response_wrapper as response:
+                    if response.status == 200:
+                        logger.info(
+                            "Успешно удалены все данные пользователя %s "
+                            "из базы данных и файлов на сервере",
+                            user_id,
+                        )
+                    elif response.status == 404:
+                        logger.warning(
+                            "Данные пользователя %s не найдены во время очистки",
+                            user_id,
+                        )
+                    else:
+                        detail = await response.text()
+                        logger.error(
+                            "Ошибка при удалении данных пользователя %s: %s %s",
+                            user_id,
+                            response.status,
+                            detail,
+                        )
             except Exception as e:
                 logger.error(
                     f"Исключение при удалении данных пользователя {user_id}: {str(e)}",

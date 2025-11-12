@@ -1,10 +1,9 @@
 import logging
-import requests
-
 from aiogram import Router, F
 from aiogram.types import Message
 
-from config import GROUP_ID, TROPHY_GROUP_CHAT_ID, API_BASE_URL
+from config import GROUP_ID, TROPHY_GROUP_CHAT_ID
+from api_client import api_post
 
 ALLOWED_GROUP_IDS = [
     GROUP_ID,
@@ -48,42 +47,33 @@ async def waves_command(message: Message):
         )
         return
 
-    api_url = API_BASE_URL or "http://localhost:8000"
-    if not api_url.startswith("http"):
-        api_url = "http://localhost:8000"
-
-    endpoint_url = f"{api_url}/api/send_waves"
     params = {
         "chat_id": str(message.chat.id),
-        "base_url": api_url,
     }
 
     if message.is_topic_message:
         params["message_thread_id"] = message.message_thread_id
 
     try:
-        logger.info("Вызываем эндпоинт %s с параметрами %s", endpoint_url, params)
-        response = requests.post(endpoint_url, params=params, timeout=60)
+        response_wrapper = await api_post("/api/send_waves", params=params)
+        async with response_wrapper as response:
+            if response.status == 200:
+                logger.info("Скриншот волн успешно отправлен.")
+                return
 
-        if response.status_code == 200:
-            logger.info("Скриншот волн успешно отправлен.")
-            return
+            try:
+                payload = await response.json()
+                error_detail = payload.get("detail", "Unknown error")
+            except Exception:
+                error_detail = await response.text()
 
-        try:
-            error_detail = response.json().get("detail", "Unknown error")
-        except ValueError:
-            error_detail = response.text
+            logger.error(
+                "Ошибка API при отправке скриншота волн: %s - %s",
+                response.status,
+                error_detail,
+            )
+            await message.reply(f"❌ Ошибка при создании скриншота волн: {error_detail}")
 
-        logger.error(
-            "Ошибка API при отправке скриншота волн: %s - %s",
-            response.status_code,
-            error_detail,
-        )
-        await message.reply(f"❌ Ошибка при создании скриншота волн: {error_detail}")
-
-    except requests.exceptions.RequestException as exc:
-        logger.error("Ошибка запроса к API: %s", exc, exc_info=True)
-        await message.reply(f"❌ Ошибка при обращении к API: {exc}")
     except Exception as exc:
         logger.error("Ошибка при обработке команды !волны: %s", exc, exc_info=True)
         await message.reply(f"❌ Ошибка при отправке волн: {exc}")

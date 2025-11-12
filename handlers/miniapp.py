@@ -16,6 +16,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from config import (
     MINI_APP_URL, API_BASE_URL, BOT_TOKEN, GROUP_ID
 )
+from api_client import api_get, api_post
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -83,27 +84,25 @@ async def fetch_build_data(build_id: int) -> tuple:
     """
     logger.info(f"Запрашиваем билд {build_id} из API")
     try:
-        async with aiohttp.ClientSession() as session:
-            url = f"{API_BASE_URL}/api/builds.get/{build_id}"
-            logger.info(f"URL запроса: {url}")
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                logger.info(f"Статус ответа: {response.status}")
-                if response.status == 404:
-                    logger.warning(f"Билд {build_id} не найден")
-                    return None, "Билд не найден"
-                elif response.status == 403:
-                    data = await response.json()
-                    if data.get('is_private'):
-                        logger.warning(f"Билд {build_id} приватный")
-                        return None, "Билд найден, но он приватный"
-                    return None, "Доступ к билду запрещен"
-                elif response.status == 200:
-                    data = await response.json()
-                    logger.info(f"Получены данные билда: {data}")
-                    return data.get('build'), None
-                else:
-                    logger.error(f"Неожиданный статус API: {response.status}")
-                    return None, f"Ошибка сервера (код {response.status})"
+        response_wrapper = await api_get(f"/api/builds.get/{build_id}")
+        async with response_wrapper as response:
+            logger.info("Статус ответа: %s", response.status)
+            if response.status == 404:
+                logger.warning("Билд %s не найден", build_id)
+                return None, "Билд не найден"
+            if response.status == 403:
+                data = await response.json()
+                if data.get("is_private"):
+                    logger.warning("Билд %s приватный", build_id)
+                    return None, "Билд найден, но он приватный"
+                return None, "Доступ к билду запрещен"
+            if response.status == 200:
+                data = await response.json()
+                logger.info("Получены данные билда: %s", data)
+                return data.get("build"), None
+
+            logger.error("Неожиданный статус API: %s", response.status)
+            return None, f"Ошибка сервера (код {response.status})"
     except asyncio.TimeoutError:
         logger.error(f"Таймаут при запросе билда {build_id}")
         return None, "Превышено время ожидания ответа от сервера"
@@ -191,77 +190,85 @@ async def approve_mastery_callback(callback: CallbackQuery):
         data.add_field('moderator_username', moderator_username)
         
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{API_BASE_URL}/api/mastery.approve",
-                    data=data,
-                    headers={"Authorization": BOT_TOKEN},
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        logger.error(f"Ошибка API при одобрении: {response.status} - {error_text}")
-                        await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
-                        return
-                    
-                    result = await response.json()
-                    
-                    if not result.get('success'):
-                        await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
-                        return
-                    
-                    # Получаем данные из ответа
-                    category_name = result.get('category_name', category_key)
-                    level_name = result.get('level_name', f'Уровень {next_level}')
-                    psn_id = result.get('psn_id', '')
-                    username = result.get('username', '')
-                    
-                    # Отправляем сообщение в группу поздравлений
-                    if GROUP_ID:
-                        try:
-                            # Получаем username пользователя через Bot API
-                            user_mention = psn_id  # fallback на psn_id
-                            try:
-                                chat_info = await callback.bot.get_chat(target_user_id)
-                                if chat_info.username:
-                                    user_mention = f"@{chat_info.username}"
-                                elif chat_info.first_name:
-                                    user_mention = chat_info.first_name
-                                else:
-                                    user_mention = psn_id
-                            except Exception as e:
-                                logger.error(f"Ошибка получения username пользователя {target_user_id}: {e}")
-                                user_mention = username if username else psn_id
-                            
-                            await callback.bot.send_message(
-                                chat_id=GROUP_ID,
-                                text=f"🎉 Участник {user_mention} ({psn_id}) повысил свой уровень в категории <b>{category_name}</b> — Уровень {next_level}, {level_name}",
-                                parse_mode="HTML"
-                            )
-                        except Exception as e:
-                            logger.error(f"Ошибка отправки сообщения в группу поздравлений: {e}")
-                    
-                    # Редактируем исходное сообщение (добавляем информацию в конец и убираем кнопки)
+            response_wrapper = await api_post(
+                "/api/mastery.approve",
+                data=data,
+                use_bot_token=True,
+            )
+            async with response_wrapper as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error("Ошибка API при одобрении: %s - %s", response.status, error_text)
+                    await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
+                    return
+
+                result = await response.json()
+
+                if not result.get("success"):
+                    await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
+                    return
+
+                # Получаем данные из ответа
+                category_name = result.get("category_name", category_key)
+                level_name = result.get("level_name", f"Уровень {next_level}")
+                psn_id = result.get("psn_id", "")
+                username = result.get("username", "")
+
+                # Отправляем сообщение в группу поздравлений
+                if GROUP_ID:
                     try:
-                        original_text = callback.message.text or callback.message.caption or ""
-                        updated_text = original_text + f"\n\n✅ Заявка одобрена @{moderator_username}"
-                        
-                        if callback.message.photo or callback.message.video:
-                            await callback.message.edit_caption(
-                                caption=updated_text,
-                                parse_mode="HTML",
-                                reply_markup=None  # Убираем кнопки
-                            )
-                        else:
-                            await callback.message.edit_text(
-                                text=updated_text,
-                                parse_mode="HTML",
-                                reply_markup=None  # Убираем кнопки
-                            )
+                        # Получаем username пользователя через Bot API
+                        user_mention = psn_id  # fallback на psn_id
+                        try:
+                            chat_info = await callback.bot.get_chat(target_user_id)
+                            if chat_info.username:
+                                user_mention = f"@{chat_info.username}"
+                            elif chat_info.first_name:
+                                user_mention = chat_info.first_name
+                            else:
+                                user_mention = psn_id
+                        except Exception as e:
+                            logger.error("Ошибка получения username пользователя %s: %s", target_user_id, e)
+                            user_mention = username if username else psn_id
+
+                        await callback.bot.send_message(
+                            chat_id=GROUP_ID,
+                            text=(
+                                "🎉 Участник {mention} ({psn}) повысил свой уровень в категории "
+                                "<b>{category}</b> — Уровень {level_num}, {level_name}"
+                            ).format(
+                                mention=user_mention,
+                                psn=psn_id,
+                                category=category_name,
+                                level_num=next_level,
+                                level_name=level_name,
+                            ),
+                            parse_mode="HTML",
+                        )
                     except Exception as e:
-                        logger.error(f"Ошибка редактирования сообщения: {e}")
-                    
-                    await callback.answer("✅ Заявка одобрена!", show_alert=False)
+                        logger.error("Ошибка отправки сообщения в группу поздравлений: %s", e)
+
+                # Редактируем исходное сообщение (добавляем информацию в конец и убираем кнопки)
+                try:
+                    original_text = callback.message.text or callback.message.caption or ""
+                    updated_text = original_text + f"\n\n✅ Заявка одобрена @{moderator_username}"
+
+                    if callback.message.photo or callback.message.video:
+                        await callback.message.edit_caption(
+                            caption=updated_text,
+                            parse_mode="HTML",
+                            reply_markup=None,
+                        )
+                    else:
+                        await callback.message.edit_text(
+                            text=updated_text,
+                            parse_mode="HTML",
+                            reply_markup=None,
+                        )
+                except Exception as e:
+                    logger.error("Ошибка редактирования сообщения: %s", e)
+
+                await callback.answer("✅ Заявка одобрена!", show_alert=False)
         
         except aiohttp.ClientError as e:
             logger.error(f"Ошибка сети при одобрении заявки: {e}")
@@ -382,63 +389,66 @@ async def handle_mastery_rejection(message: Message, pending_key: int):
     data.add_field('moderator_username', moderator_username)
     
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{API_BASE_URL}/api/mastery.reject",
-                data=data,
-                headers={"Authorization": BOT_TOKEN},
-                timeout=aiohttp.ClientTimeout(total=10)
-            ) as response:
-                if response.status != 200:
-                    error_text = await response.text()
-                    logger.error(f"Ошибка API при отклонении мастерства: {response.status} - {error_text}")
-                    await message.reply("❌ Ошибка обработки заявки")
-                    return
-                
-                result = await response.json()
-                
-                if not result.get('success'):
-                    await message.reply("❌ Ошибка обработки заявки")
-                    return
-                
-                # Редактируем сообщение-инструкцию
-                try:
-                    updated_instruction_text = f"""❌ <b>Заявка отклонена</b>
+        response_wrapper = await api_post(
+            "/api/mastery.reject",
+            data=data,
+            use_bot_token=True,
+        )
+        async with response_wrapper as response:
+            if response.status != 200:
+                error_text = await response.text()
+                logger.error(
+                    "Ошибка API при отклонении мастерства: %s - %s",
+                    response.status,
+                    error_text,
+                )
+                await message.reply("❌ Ошибка обработки заявки")
+                return
 
-Кем: @{moderator_username}
-Причина: {reason}
+            result = await response.json()
 
-✅ Уведомление отправлено пользователю"""
-                    
+            if not result.get("success"):
+                await message.reply("❌ Ошибка обработки заявки")
+                return
+
+            # Редактируем сообщение-инструкцию
+            try:
+                updated_instruction_text = (
+                    "❌ <b>Заявка отклонена</b>\n\n"
+                    f"Кем: @{moderator_username}\n"
+                    f"Причина: {reason}\n\n"
+                    "✅ Уведомление отправлено пользователю"
+                )
+
+                await message.bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=instruction_message_id,
+                    text=updated_instruction_text,
+                    parse_mode="HTML",
+                )
+            except Exception as e:
+                logger.error("Ошибка редактирования сообщения-инструкции: %s", e)
+
+            # Убираем кнопки из исходного сообщения
+            try:
+                if has_photo:
+                    await message.bot.edit_message_caption(
+                        chat_id=chat_id,
+                        message_id=original_message_id,
+                        caption=original_text,
+                        parse_mode="HTML",
+                        reply_markup=None,
+                    )
+                else:
                     await message.bot.edit_message_text(
                         chat_id=chat_id,
-                        message_id=instruction_message_id,
-                        text=updated_instruction_text,
-                        parse_mode="HTML"
+                        message_id=original_message_id,
+                        text=original_text,
+                        parse_mode="HTML",
+                        reply_markup=None,
                     )
-                except Exception as e:
-                    logger.error(f"Ошибка редактирования сообщения-инструкции: {e}")
-                
-                # Убираем кнопки из исходного сообщения
-                try:
-                    if has_photo:
-                        await message.bot.edit_message_caption(
-                            chat_id=chat_id,
-                            message_id=original_message_id,
-                            caption=original_text,
-                            parse_mode="HTML",
-                            reply_markup=None
-                        )
-                    else:
-                        await message.bot.edit_message_text(
-                            chat_id=chat_id,
-                            message_id=original_message_id,
-                            text=original_text,
-                            parse_mode="HTML",
-                            reply_markup=None
-                        )
-                except Exception as e:
-                    logger.error(f"Ошибка редактирования исходного сообщения: {e}")
+            except Exception as e:
+                logger.error("Ошибка редактирования исходного сообщения: %s", e)
     
     except aiohttp.ClientError as e:
         logger.error(f"Ошибка сети при отклонении заявки на мастерство: {e}")
@@ -472,63 +482,62 @@ async def handle_trophy_rejection(message: Message, pending_key: int):
     data.add_field('moderator_username', moderator_username)
     
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{API_BASE_URL}/api/trophy.reject",
-                data=data,
-                headers={"Authorization": BOT_TOKEN},
-                timeout=aiohttp.ClientTimeout(total=10)
-            ) as response:
-                if response.status != 200:
-                    error_text = await response.text()
-                    logger.error(f"Ошибка API при отклонении трофея: {response.status} - {error_text}")
-                    await message.reply("❌ Ошибка обработки заявки")
-                    return
-                
-                result = await response.json()
-                
-                if not result.get('success'):
-                    await message.reply("❌ Ошибка обработки заявки")
-                    return
-                
-                # Редактируем сообщение-инструкцию
-                try:
-                    updated_instruction_text = f"""❌ <b>Заявка отклонена</b>
+        response_wrapper = await api_post(
+            "/api/trophy.reject",
+            data=data,
+            use_bot_token=True,
+        )
+        async with response_wrapper as response:
+            if response.status != 200:
+                error_text = await response.text()
+                logger.error("Ошибка API при отклонении трофея: %s - %s", response.status, error_text)
+                await message.reply("❌ Ошибка обработки заявки")
+                return
 
-Кем: @{moderator_username}
-Причина: {reason}
+            result = await response.json()
 
-✅ Уведомление отправлено пользователю"""
-                    
+            if not result.get("success"):
+                await message.reply("❌ Ошибка обработки заявки")
+                return
+
+            # Редактируем сообщение-инструкцию
+            try:
+                updated_instruction_text = (
+                    "❌ <b>Заявка отклонена</b>\n\n"
+                    f"Кем: @{moderator_username}\n"
+                    f"Причина: {reason}\n\n"
+                    "✅ Уведомление отправлено пользователю"
+                )
+
+                await message.bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=instruction_message_id,
+                    text=updated_instruction_text,
+                    parse_mode="HTML",
+                )
+            except Exception as e:
+                logger.error("Ошибка редактирования сообщения-инструкции: %s", e)
+
+            # Убираем кнопки из исходного сообщения
+            try:
+                if has_photo:
+                    await message.bot.edit_message_caption(
+                        chat_id=chat_id,
+                        message_id=original_message_id,
+                        caption=original_text,
+                        parse_mode="HTML",
+                        reply_markup=None,
+                    )
+                else:
                     await message.bot.edit_message_text(
                         chat_id=chat_id,
-                        message_id=instruction_message_id,
-                        text=updated_instruction_text,
-                        parse_mode="HTML"
+                        message_id=original_message_id,
+                        text=original_text,
+                        parse_mode="HTML",
+                        reply_markup=None,
                     )
-                except Exception as e:
-                    logger.error(f"Ошибка редактирования сообщения-инструкции: {e}")
-                
-                # Убираем кнопки из исходного сообщения
-                try:
-                    if has_photo:
-                        await message.bot.edit_message_caption(
-                            chat_id=chat_id,
-                            message_id=original_message_id,
-                            caption=original_text,
-                            parse_mode="HTML",
-                            reply_markup=None
-                        )
-                    else:
-                        await message.bot.edit_message_text(
-                            chat_id=chat_id,
-                            message_id=original_message_id,
-                            text=original_text,
-                            parse_mode="HTML",
-                            reply_markup=None
-                        )
-                except Exception as e:
-                    logger.error(f"Ошибка редактирования исходного сообщения: {e}")
+            except Exception as e:
+                logger.error("Ошибка редактирования исходного сообщения: %s", e)
     
     except aiohttp.ClientError as e:
         logger.error(f"Ошибка сети при отклонении заявки на трофей: {e}")
@@ -563,82 +572,80 @@ async def approve_trophy_callback(callback: CallbackQuery):
         data.add_field('moderator_username', moderator_username)
         
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{API_BASE_URL}/api/trophy.approve",
-                    data=data,
-                    headers={"Authorization": BOT_TOKEN},
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        logger.error(f"Ошибка API при одобрении трофея: {response.status} - {error_text}")
-                        await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
-                        return
-                    
-                    result = await response.json()
-                    
-                    if not result.get('success'):
-                        await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
-                        return
-                    
-                    # Получаем данные из ответа
-                    trophy_name = result.get('trophy_name', trophy_key)
-                    psn_id = result.get('psn_id', '')
-                    username = result.get('username', '')
-                    
-                    # Отправляем сообщение в группу поздравлений
-                    if GROUP_ID:
-                        try:
-                            # Получаем username пользователя через Bot API
-                            user_mention = psn_id  # fallback на psn_id
-                            try:
-                                chat_info = await callback.bot.get_chat(target_user_id)
-                                if chat_info.username:
-                                    user_mention = f"@{chat_info.username}"
-                                elif chat_info.first_name:
-                                    user_mention = chat_info.first_name
-                                else:
-                                    user_mention = psn_id
-                            except Exception as e:
-                                logger.error(f"Ошибка получения username пользователя {target_user_id}: {e}")
-                                user_mention = username if username else psn_id
-                            
-                            await callback.bot.send_message(
-                                chat_id=GROUP_ID,
-                                text=f"🎉 Участник {user_mention} ({psn_id}) получил трофей <b>{trophy_name}</b>!",
-                                parse_mode="HTML"
-                            )
-                        except Exception as e:
-                            logger.error(f"Ошибка отправки сообщения в группу поздравлений: {e}")
-                    
-                    # Редактируем исходное сообщение (добавляем информацию в конец и убираем кнопки)
+            response_wrapper = await api_post(
+                "/api/trophy.approve",
+                data=data,
+                use_bot_token=True,
+            )
+            async with response_wrapper as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(
+                        "Ошибка API при одобрении трофея: %s - %s",
+                        response.status,
+                        error_text,
+                    )
+                    await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
+                    return
+
+                result = await response.json()
+
+                if not result.get("success"):
+                    await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
+                    return
+
+                trophy_name = result.get("trophy_name", trophy_key)
+                psn_id = result.get("psn_id", "")
+                username = result.get("username", "")
+
+                if GROUP_ID:
                     try:
-                        original_text = callback.message.text or callback.message.caption or ""
-                        updated_text = original_text + f"\n\n✅ Заявка одобрена @{moderator_username}"
-                        
-                        if callback.message.photo or callback.message.video:
-                            await callback.message.edit_caption(
-                                caption=updated_text,
-                                parse_mode="HTML",
-                                reply_markup=None  # Убираем кнопки
-                            )
-                        else:
-                            await callback.message.edit_text(
-                                text=updated_text,
-                                parse_mode="HTML",
-                                reply_markup=None  # Убираем кнопки
-                            )
+                        user_mention = psn_id
+                        try:
+                            chat_info = await callback.bot.get_chat(target_user_id)
+                            if chat_info.username:
+                                user_mention = f"@{chat_info.username}"
+                            elif chat_info.first_name:
+                                user_mention = chat_info.first_name
+                        except Exception as e:
+                            logger.error("Ошибка получения username пользователя %s: %s", target_user_id, e)
+                            if username:
+                                user_mention = username
+
+                        await callback.bot.send_message(
+                            chat_id=GROUP_ID,
+                            text=f"🎉 Участник {user_mention} ({psn_id}) получил трофей <b>{trophy_name}</b>!",
+                            parse_mode="HTML",
+                        )
                     except Exception as e:
-                        logger.error(f"Ошибка редактирования сообщения: {e}")
-                    
-                    await callback.answer("✅ Заявка одобрена!", show_alert=False)
-        
+                        logger.error("Ошибка отправки сообщения в группу поздравлений: %s", e)
+
+                try:
+                    original_text = callback.message.text or callback.message.caption or ""
+                    updated_text = original_text + f"\n\n✅ Заявка одобрена @{moderator_username}"
+
+                    if callback.message.photo or callback.message.video:
+                        await callback.message.edit_caption(
+                            caption=updated_text,
+                            parse_mode="HTML",
+                            reply_markup=None,
+                        )
+                    else:
+                        await callback.message.edit_text(
+                            text=updated_text,
+                            parse_mode="HTML",
+                            reply_markup=None,
+                        )
+                except Exception as e:
+                    logger.error("Ошибка редактирования сообщения: %s", e)
+
+                await callback.answer("✅ Заявка одобрена!", show_alert=False)
+
         except aiohttp.ClientError as e:
-            logger.error(f"Ошибка сети при одобрении заявки на трофей: {e}")
+            logger.error("Ошибка сети при одобрении заявки на трофей: %s", e)
             await callback.answer("❌ Ошибка подключения к серверу", show_alert=True)
         except Exception as e:
-            logger.error(f"Неожиданная ошибка при одобрении заявки на трофей: {e}")
+            logger.error("Неожиданная ошибка при одобрении заявки на трофей: %s", e)
             await callback.answer("❌ Произошла ошибка", show_alert=True)
         
     except ValueError as e:
