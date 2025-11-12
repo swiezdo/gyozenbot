@@ -49,7 +49,7 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 
 # --- Мини-приложение ----------------------------------------
 MINI_APP_URL = "https://swiezdo.github.io/tsushimaru_app/"
-API_BASE_URL = "https://tsushimaru.com"
+API_BASE_URL = "https://api.tsushimaru.com"
 
 # --- Константы для тем -------------------------------------
 # ID первого сообщения темы "legends" - если ответ на это сообщение, 

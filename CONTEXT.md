@@ -50,7 +50,7 @@
 - **GYOZEN_TOPIC_ID** - ID темы для Гёдзена (847)
 - **TROPHY_GROUP_CHAT_ID** - ID группы для трофеев (-1002348168326)
 - **MINI_APP_URL** - https://swiezdo.github.io/tsushimaru_app/
-- **API_BASE_URL** - https://tsushimaru.com
+- **API_BASE_URL** - https://api.tsushimaru.com
 - **AI_PROVIDER** - "openai" или "deepseek"
 - **LEGENDS_TOPIC_FIRST_MESSAGE** - ID первого сообщения темы (2673) - для определения обычных сообщений в теме
 
