@@ -28,10 +28,10 @@ def _get_class_icons() -> dict:
     """Получает словарь с URL иконок классов (lazy evaluation)"""
     _raw_base = _get_raw_base()
     return {
-        'Самурай': f'{_raw_base}/assets/icons/samurai.png',
-        'Охотник': f'{_raw_base}/assets/icons/hunter.png',
-        'Убийца': f'{_raw_base}/assets/icons/assassin.png',
-        'Ронин': f'{_raw_base}/assets/icons/ronin.png'
+        'Самурай': f'{_raw_base}/assets/icons/classes/samurai.png',
+        'Охотник': f'{_raw_base}/assets/icons/classes/hunter.png',
+        'Убийца': f'{_raw_base}/assets/icons/classes/assassin.png',
+        'Ронин': f'{_raw_base}/assets/icons/classes/ronin.png'
     }
 
 async def search_builds(query: str, limit: int = 10) -> list:

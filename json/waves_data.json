@@ -1,6 +1,6 @@
 [
   {
-    "slug": "aoi",
+    "slug": "the-defence-of-aoi-village",
     "name": "Оборона деревни Аой",
     "numbers": {
       "week1": "1.3",
@@ -68,7 +68,7 @@
     }
   },
   {
-    "slug": "bas",
+    "slug": "blood-and-steel",
     "name": "Кровь и сталь",
     "numbers": {
       "week1": "1.6",
@@ -135,7 +135,7 @@
     }
   },
   {
-    "slug": "bis",
+    "slug": "blood-in-the-snow",
     "name": "Кровь на снегу",
     "numbers": {
       "week1": "1.2",
@@ -181,7 +181,7 @@
     },
     "mods": {
       "mod1": "Лесной пожар",
-      "mod1_icon": "wildfire.svg",
+      "mod1_icon": "wildfire-backdrop.svg",
       "mod2": "Взрыв",
       "mod2_icon": "eruption-backdrop.svg",
       "mod3": "Бой вслепую",
@@ -193,7 +193,7 @@
     }
   },
   {
-    "slug": "shadows",
+    "slug": "the-shadows-of-war",
     "name": "Тени войны",
     "numbers": {
       "week1": "1.4",
@@ -265,13 +265,13 @@
       "mod3": "Ядовитые облака",
       "mod3_icon": "toxic-clouds-backdrop.svg",
       "mod4": "Лесной пожар",
-      "mod4_icon": "wildfire.svg",
+      "mod4_icon": "wildfire-backdrop.svg",
       "mod5": "Взрыв",
       "mod5_icon": "eruption-backdrop.svg"
     }
   },
   {
-    "slug": "shores",
+    "slug": "the-shores-of-vengeance",
     "name": "Берега отмщения",
     "numbers": {
       "week1": "1.1",
@@ -336,13 +336,13 @@
       "mod3": "Горящие клинки",
       "mod3_icon": "burning-blades-backdrop.svg",
       "mod4": "Лесной пожар",
-      "mod4_icon": "wildfire.svg",
+      "mod4_icon": "wildfire-backdrop.svg",
       "mod5": "Взрыв",
       "mod5_icon": "eruption-backdrop.svg"
     }
   },
   {
-    "slug": "twilight",
+    "slug": "twilight-and-ashes",
     "name": "Сумерки и пепел",
     "numbers": {
       "week1": "1.5",
@@ -407,7 +407,7 @@
       "mod1": "Ядовитые облака",
       "mod1_icon": "toxic-clouds-backdrop.svg",
       "mod2": "Лесной пожар",
-      "mod2_icon": "wildfire.svg",
+      "mod2_icon": "wildfire-backdrop.svg",
       "mod3": "Бой вслепую",
       "mod3_icon": "fighting-blind-backdrop.svg",
       "mod4": "Неуязвимость",
