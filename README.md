@@ -133,7 +133,7 @@ gyozenbot/
 - **GROUP_ID** - ID основной группы
 - **GYOZEN_TOPIC_ID** - ID темы для диалогов с Гёдзеном
 - **TROPHY_GROUP_CHAT_ID** - ID группы для трофеев
-- **MINI_APP_URL** - URL Mini App (GitHub Pages)
+- **MINI_APP_URL** - URL Mini App
 - **API_BASE_URL** - URL API miniapp_api
 - **AI_PROVIDER** - провайдер AI ("openai" или "deepseek")
 - **OPENAI_API_KEY** - ключ OpenAI (из .env)
