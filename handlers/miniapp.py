@@ -14,7 +14,11 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKe
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import (
-    MINI_APP_URL, API_BASE_URL, BOT_TOKEN, GROUP_ID
+    MINI_APP_URL,
+    API_BASE_URL,
+    BOT_TOKEN,
+    GROUP_ID,
+    CONGRATULATION_GROUP_ID,
 )
 from api_client import api_get, api_post
 
@@ -215,7 +219,7 @@ async def approve_mastery_callback(callback: CallbackQuery):
                 username = result.get("username", "")
 
                 # Отправляем сообщение в группу поздравлений
-                if GROUP_ID:
+                if CONGRATULATION_GROUP_ID:
                     try:
                         # Получаем username пользователя через Bot API
                         user_mention = psn_id  # fallback на psn_id
@@ -232,7 +236,7 @@ async def approve_mastery_callback(callback: CallbackQuery):
                             user_mention = username if username else psn_id
 
                         await callback.bot.send_message(
-                            chat_id=GROUP_ID,
+                            chat_id=CONGRATULATION_GROUP_ID,
                             text=(
                                 "🎉 Участник {mention} ({psn}) повысил свой уровень в категории "
                                 "<b>{category}</b> — Уровень {level_num}, {level_name}"
@@ -598,7 +602,7 @@ async def approve_trophy_callback(callback: CallbackQuery):
                 psn_id = result.get("psn_id", "")
                 username = result.get("username", "")
 
-                if GROUP_ID:
+                if CONGRATULATION_GROUP_ID:
                     try:
                         user_mention = psn_id
                         try:
