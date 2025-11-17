@@ -38,7 +38,7 @@ OWNER_ID = 1053983438             # ID владельца
 GROUP_ID = -1002365374672         # ID основной группы
 GYOZEN_TOPIC_ID = 847             # ID темы для гёдзена (ИИ)
 TROPHY_GROUP_CHAT_ID = -1002348168326  # ID группы для трофеев
-CONGRATULATION_GROUP_ID = -1002348168326
+CONGRATULATION_GROUP_ID = -1002365374672
 
 # --- Картинки (через OpenAI DALL·E) --------------------------
 IMAGE_MODEL = "dall-e-3"
