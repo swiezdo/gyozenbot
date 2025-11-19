@@ -15,6 +15,7 @@ from handlers import (
     scheduler,
     group_events,
     waves_preview,
+    moderation,
 )
 
 async def main():
@@ -29,10 +30,11 @@ async def main():
     )
     dp = Dispatcher()
 
-    # Роутеры подключены в произвольном порядке - порядок не важен,
-    # так как все обработчики используют специфичные фильтры
+    # Роутеры подключены в определенном порядке - порядок важен!
+    # Более специфичные хэндлеры (например, moderation) должны быть перед общими (например, miniapp с F.reply_to_message)
     dp.include_routers(
         inline.router,      # inline queries - не конфликтует с message handlers
+        moderation.router,  # команды модерации !кик, !бан, !мут (должен быть перед miniapp.router)
         gyozen.router,      # теперь с фильтром F.text.regexp() - не перехватывает все сообщения
         waves_new.router,   # новая команда /waves
         profile.router,     # команда !п
