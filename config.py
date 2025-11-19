@@ -48,6 +48,11 @@ IMAGE_SIZE  = "1024x1024"
 OPENAI_API_KEY   = os.getenv("OPENAI_API_KEY", "")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 
+# --- Telegram Client API (для Telethon) --------------------
+TELEGRAM_API_ID = os.getenv("TELEGRAM_API_ID")
+TELEGRAM_API_HASH = os.getenv("TELEGRAM_API_HASH")
+TELEGRAM_PHONE = os.getenv("TELEGRAM_PHONE", "")
+
 # --- Мини-приложение ----------------------------------------
 MINI_APP_URL = "https://tsushimaru.com/"
 API_BASE_URL = "https://api.tsushimaru.com"
