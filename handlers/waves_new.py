@@ -341,33 +341,33 @@ def _resolve_map_slug(map_name: Optional[str]) -> Optional[str]:
 
 
 SPAWN_LAYOUT = {
-    "shores": [
+    "the-shores-of-vengeance": [
         ["spawn1"],
         ["spawn1_type1", "spawn1_type2"],
         ["spawn2"],
         ["spawn3"],
         ["spawn4"],
     ],
-    "aoi": [
+    "the-defence-of-aoi-village": [
         ["spawn1"],
         ["spawn2"],
         ["spawn3"],
         ["spawn4"],
         ["spawn5"],
     ],
-    "shadows": [
+    "the-shadows-of-war": [
         ["spawn1"],
         ["spawn1_type1", "spawn1_type2", "spawn1_type3"],
         ["spawn2"],
         ["spawn3"],
         ["spawn3_type1", "spawn3_type2", "spawn3_type3"],
     ],
-    "bis": [
+    "blood-in-the-snow": [
         ["spawn1"],
         ["spawn2"],
         ["spawn3"],
     ],
-    "twilight": [
+    "twilight-and-ashes": [
         ["spawn1"],
         ["spawn2"],
         ["spawn2_type1", "spawn2_type2"],
@@ -375,7 +375,7 @@ SPAWN_LAYOUT = {
         ["spawn4"],
         ["spawn4_type1", "spawn4_type2"],
     ],
-    "bas": [
+    "blood-and-steel": [
         ["spawn1"],
         ["spawn2"],
         ["spawn2_type1", "spawn2_type2"],

@@ -69,7 +69,7 @@
   },
   {
     "slug": "blood-and-steel",
-    "name": "Кровь и сталь",
+    "name": "Кровь и Сталь",
     "numbers": {
       "week1": "1.6",
       "week2": "2.4"
@@ -136,7 +136,7 @@
   },
   {
     "slug": "blood-in-the-snow",
-    "name": "Кровь на снегу",
+    "name": "Кровь на Снегу",
     "numbers": {
       "week1": "1.2",
       "week2": "2.2"
@@ -194,7 +194,7 @@
   },
   {
     "slug": "the-shadows-of-war",
-    "name": "Тени войны",
+    "name": "Тени Войны",
     "numbers": {
       "week1": "1.4",
       "week2": "1.7",
@@ -272,7 +272,7 @@
   },
   {
     "slug": "the-shores-of-vengeance",
-    "name": "Берега отмщения",
+    "name": "Берега Отмщения",
     "numbers": {
       "week1": "1.1",
       "week2": "1.8",
@@ -343,7 +343,7 @@
   },
   {
     "slug": "twilight-and-ashes",
-    "name": "Сумерки и пепел",
+    "name": "Сумерки и Пепел",
     "numbers": {
       "week1": "1.5",
       "week2": "2.3",
