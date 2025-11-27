@@ -1018,6 +1018,26 @@ async def approve_top100_callback(callback: CallbackQuery):
                 category_name = result.get("category_name", category)
                 reward = result.get("reward", 0)
 
+                # Отправляем поздравление в основную группу
+                try:
+                    user_mention = psn_id
+                    try:
+                        chat_info = await callback.bot.get_chat(target_user_id)
+                        if chat_info.username:
+                            user_mention = f"@{chat_info.username}"
+                        elif chat_info.first_name:
+                            user_mention = chat_info.first_name
+                    except Exception as e:
+                        logger.error("Ошибка получения username пользователя %s: %s", target_user_id, e)
+
+                    await callback.bot.send_message(
+                        chat_id=GROUP_ID,
+                        text=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание ТОП-100 в категории {category_name} и получил {reward} Магатама 🪙",
+                        parse_mode="HTML",
+                    )
+                except Exception as e:
+                    logger.error("Ошибка отправки сообщения в группу поздравлений: %s", e)
+
                 try:
                     original_text = callback.message.text or callback.message.caption or ""
                     updated_text = original_text + f"\n\n✅ Заявка одобрена @{moderator_username}"
