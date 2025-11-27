@@ -19,6 +19,7 @@ from config import (
     BOT_TOKEN,
     GROUP_ID,
     CONGRATULATION_GROUP_ID,
+    TROPHY_GROUP_CHAT_ID,
 )
 from api_client import api_get, api_post
 
@@ -874,7 +875,7 @@ async def approve_hellmode_quest_callback(callback: CallbackQuery):
                         logger.error("Ошибка получения username пользователя %s: %s", target_user_id, e)
 
                     await callback.bot.send_message(
-                        chat_id=GROUP_ID,
+                        chat_id=TROPHY_GROUP_CHAT_ID,
                         text=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание HellMode и получил {reward} Магатама 🪙",
                         parse_mode="HTML",
                     )
@@ -1031,7 +1032,7 @@ async def approve_top100_callback(callback: CallbackQuery):
                         logger.error("Ошибка получения username пользователя %s: %s", target_user_id, e)
 
                     await callback.bot.send_message(
-                        chat_id=GROUP_ID,
+                        chat_id=TROPHY_GROUP_CHAT_ID,
                         text=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание ТОП-100 в категории {category_name} и получил {reward} Магатама 🪙",
                         parse_mode="HTML",
                     )
