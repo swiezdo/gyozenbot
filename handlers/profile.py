@@ -3,8 +3,9 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message
 
-from config import GROUP_ID, LEGENDS_TOPIC_FIRST_MESSAGE, TROPHY_GROUP_CHAT_ID
+from config import GROUP_ID, TROPHY_GROUP_CHAT_ID
 from api_client import api_get, api_post
+from handlers.utils import get_target_user_id
 
 # Разрешенные группы для команды !п
 ALLOWED_GROUP_IDS = [
@@ -44,25 +45,6 @@ def _is_allowed_context(message: Message) -> bool:
     logger.debug(f"Неизвестный тип чата: {message.chat.type}")
     return False
 
-def _get_target_user_id(message: Message) -> int:
-    """
-    Определяет user_id пользователя, чей профиль нужно показать.
-    
-    Логика:
-    1. Если это reply на сообщение с ID темы (2673) → показать профиль автора команды
-    2. Если это reply на другое сообщение → показать профиль автора того сообщения  
-    3. Если просто команда !п → показать профиль автора команды
-    """
-    if message.reply_to_message:
-        # Если ответ на сообщение с ID темы - это обычное сообщение в теме
-        if message.reply_to_message.message_id == LEGENDS_TOPIC_FIRST_MESSAGE:
-            return message.from_user.id
-        else:
-            # Ответ на реальное сообщение - показываем профиль автора того сообщения
-            return message.reply_to_message.from_user.id
-    else:
-        # Просто команда без ответа - показываем профиль автора команды
-        return message.from_user.id
 
 @router.message(F.text == "!п")
 async def profile_command(message: Message):
@@ -81,7 +63,7 @@ async def profile_command(message: Message):
     
     try:
         # Определяем целевого пользователя
-        target_user_id = _get_target_user_id(message)
+        target_user_id = get_target_user_id(message)
         logger.info(f"Целевой пользователь для команды !п: {target_user_id}")
         
         # Проверяем наличие пользователя через API

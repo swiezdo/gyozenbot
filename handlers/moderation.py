@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from aiogram import Router, F
 from aiogram.types import Message, ChatPermissions
+from handlers.utils import get_target_user_id
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -42,18 +43,6 @@ async def _check_admin_rights(message: Message) -> bool:
         return False
 
 
-async def _get_target_user(message: Message):
-    """
-    Извлекает целевого пользователя из reply_to_message.
-    Возвращает user_id или None.
-    """
-    if not message.reply_to_message:
-        return None
-    
-    if message.reply_to_message.from_user is None:
-        return None
-    
-    return message.reply_to_message.from_user.id
 
 
 @router.message(F.text == "!кик", F.reply_to_message)
@@ -76,8 +65,8 @@ async def kick_command(message: Message):
         return
     
     # Получение целевого пользователя
-    target_user_id = await _get_target_user(message)
-    if target_user_id is None:
+    target_user_id = get_target_user_id(message)
+    if target_user_id is None or message.from_user is None:
         logger.warning("Не удалось определить целевого пользователя для !кик")
         await message.reply("❌ Не удалось определить пользователя")
         return
@@ -128,8 +117,8 @@ async def ban_command(message: Message):
         return
     
     # Получение целевого пользователя
-    target_user_id = await _get_target_user(message)
-    if target_user_id is None:
+    target_user_id = get_target_user_id(message)
+    if target_user_id is None or message.from_user is None:
         logger.warning("Не удалось определить целевого пользователя для !бан")
         await message.reply("❌ Не удалось определить пользователя")
         return
@@ -176,8 +165,8 @@ async def mute_command(message: Message):
         return
     
     # Получение целевого пользователя
-    target_user_id = await _get_target_user(message)
-    if target_user_id is None:
+    target_user_id = get_target_user_id(message)
+    if target_user_id is None or message.from_user is None:
         logger.warning("Не удалось определить целевого пользователя для !мут")
         await message.reply("❌ Не удалось определить пользователя")
         return

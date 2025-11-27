@@ -61,6 +61,12 @@ API_BASE_URL = "https://api.tsushimaru.com"
 # ID первого сообщения темы "legends" - если ответ на это сообщение, 
 # то это обычное сообщение в теме, а не реальный ответ
 LEGENDS_TOPIC_FIRST_MESSAGE = 2673
+MEMES_TOPIC_FIRST_MESSAGE = 480
+GYOZEN_TOPIC_FIRST_MESSAGE = 847
+YOTTO_TOPIC_FIRST_MESSAGE = 28140
+VIDEOS_TOPIC_FIRST_MESSAGE = 2367
+GUIDES_TOPIC_FIRST_MESSAGE = 159
+
 
 # --- Валидация конфигурации ----------------------------------
 # Для текста:
