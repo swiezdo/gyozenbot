@@ -369,6 +369,13 @@ async def handle_rejection_reason(message: Message):
                 await handle_hellmode_quest_rejection(message, pending_key)
                 return
         
+        # Проверяем, не является ли это ответом на сообщение об отклонении ТОП-100
+        if hasattr(reject_top100_callback, '_pending_rejects'):
+            pending_key = replied_message.message_id
+            if pending_key in reject_top100_callback._pending_rejects:
+                await handle_top100_rejection(message, pending_key)
+                return
+        
     except Exception as e:
         logger.error(f"Ошибка обработки причины отклонения: {e}")
         await message.reply("❌ Произошла ошибка при обработке причины")
@@ -958,3 +965,230 @@ async def reject_hellmode_quest_callback(callback: CallbackQuery):
     except Exception as e:
         logger.error(f"Ошибка обработки отклонения заявки на HellMode Quest: {e}")
         await callback.answer("❌ Произошла ошибка", show_alert=True)
+
+
+# ========== ОБРАБОТЧИКИ ЗАЯВОК НА ТОП-100 ==========
+
+@router.callback_query(F.data.startswith("approve_top100:"))
+async def approve_top100_callback(callback: CallbackQuery):
+    """Обработка кнопки 'Одобрить' для заявки на ТОП-100"""
+    try:
+        # Парсинг callback_data: approve_top100:{user_id}:{category}
+        parts = callback.data.split(":")
+        if len(parts) != 3:
+            await callback.answer("❌ Ошибка формата данных", show_alert=True)
+            return
+        
+        _, target_user_id_str, category = parts
+        target_user_id = int(target_user_id_str)
+        
+        # Получаем username модератора
+        moderator_username = callback.from_user.username or callback.from_user.first_name or "Модератор"
+        
+        # Делаем запрос к API для одобрения заявки
+        data = aiohttp.FormData()
+        data.add_field('user_id', str(target_user_id))
+        data.add_field('category', category)
+        data.add_field('moderator_username', moderator_username)
+        
+        try:
+            response_wrapper = await api_post(
+                "/api/top100.approve",
+                data=data,
+                use_bot_token=True,
+            )
+            async with response_wrapper as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(
+                        "Ошибка API при одобрении ТОП-100: %s - %s",
+                        response.status,
+                        error_text,
+                    )
+                    await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
+                    return
+
+                result = await response.json()
+
+                if not result.get("success"):
+                    await callback.answer("❌ Ошибка обработки заявки", show_alert=True)
+                    return
+
+                psn_id = result.get("psn_id", "")
+                category_name = result.get("category_name", category)
+                reward = result.get("reward", 0)
+
+                try:
+                    original_text = callback.message.text or callback.message.caption or ""
+                    updated_text = original_text + f"\n\n✅ Заявка одобрена @{moderator_username}"
+
+                    if callback.message.photo or callback.message.video:
+                        await callback.message.edit_caption(
+                            caption=updated_text,
+                            parse_mode="HTML",
+                            reply_markup=None,
+                        )
+                    else:
+                        await callback.message.edit_text(
+                            text=updated_text,
+                            parse_mode="HTML",
+                            reply_markup=None,
+                        )
+                except Exception as e:
+                    logger.error("Ошибка редактирования сообщения: %s", e)
+
+                await callback.answer("✅ Заявка одобрена!", show_alert=False)
+
+        except aiohttp.ClientError as e:
+            logger.error("Ошибка сети при одобрении заявки на ТОП-100: %s", e)
+            await callback.answer("❌ Ошибка подключения к серверу", show_alert=True)
+        except Exception as e:
+            logger.error("Неожиданная ошибка при одобрении заявки на ТОП-100: %s", e)
+            await callback.answer("❌ Произошла ошибка", show_alert=True)
+        
+    except ValueError as e:
+        logger.error(f"Ошибка парсинга callback данных: {e}")
+        await callback.answer("❌ Ошибка обработки запроса", show_alert=True)
+    except Exception as e:
+        logger.error(f"Ошибка обработки одобрения заявки на ТОП-100: {e}")
+        await callback.answer("❌ Произошла ошибка", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("reject_top100:"))
+async def reject_top100_callback(callback: CallbackQuery):
+    """Обработка кнопки 'Отклонить' для заявки на ТОП-100"""
+    try:
+        # Парсинг callback_data: reject_top100:{user_id}:{category}
+        parts = callback.data.split(":")
+        if len(parts) != 3:
+            await callback.answer("❌ Ошибка формата данных", show_alert=True)
+            return
+        
+        _, target_user_id_str, category = parts
+        target_user_id = int(target_user_id_str)
+        
+        # Получаем username модератора (того кто нажал кнопку)
+        moderator_username = callback.from_user.username or callback.from_user.first_name or "Модератор"
+        
+        # Запрашиваем причину отклонения у модератора
+        await callback.answer("Введите причину отклонения в ответ на следующее сообщение", show_alert=True)
+        
+        # Отправляем сообщение с инструкцией
+        instruction_msg = await callback.message.reply(
+            "❌ <b>Заявка будет отклонена</b>\n\n"
+            "Пожалуйста, введите причину отклонения в ответ на это сообщение:",
+            parse_mode="HTML"
+        )
+        
+        # Сохраняем состояние ожидания причины
+        if not hasattr(reject_top100_callback, '_pending_rejects'):
+            reject_top100_callback._pending_rejects = {}
+        
+        original_text = callback.message.text or callback.message.caption or ""
+        
+        reject_top100_callback._pending_rejects[instruction_msg.message_id] = {
+            'user_id': target_user_id,
+            'category': category,
+            'original_message_id': callback.message.message_id,
+            'instruction_message_id': instruction_msg.message_id,
+            'chat_id': callback.message.chat.id,
+            'has_photo': (callback.message.photo is not None) or (callback.message.video is not None),
+            'original_text': original_text,
+            'moderator_username': moderator_username
+        }
+        
+    except ValueError as e:
+        logger.error(f"Ошибка парсинга callback данных: {e}")
+        await callback.answer("❌ Ошибка обработки запроса", show_alert=True)
+    except Exception as e:
+        logger.error(f"Ошибка обработки отклонения заявки на ТОП-100: {e}")
+        await callback.answer("❌ Произошла ошибка", show_alert=True)
+
+
+async def handle_top100_rejection(message: Message, pending_key: int):
+    """Обработка отклонения заявки на ТОП-100"""
+    pending_data = reject_top100_callback._pending_rejects.pop(pending_key)
+    target_user_id = pending_data['user_id']
+    category = pending_data['category']
+    original_message_id = pending_data['original_message_id']
+    instruction_message_id = pending_data['instruction_message_id']
+    chat_id = pending_data['chat_id']
+    has_photo = pending_data.get('has_photo', False)
+    original_text = pending_data.get('original_text', '')
+    
+    reason = message.text.strip() if message.text else "Причина не указана"
+    
+    # Получаем username модератора
+    moderator_username = pending_data.get('moderator_username') or message.from_user.username or message.from_user.first_name or "Модератор"
+    
+    # Делаем запрос к API для отклонения заявки
+    data = aiohttp.FormData()
+    data.add_field('user_id', str(target_user_id))
+    data.add_field('category', category)
+    data.add_field('reason', reason)
+    data.add_field('moderator_username', moderator_username)
+    
+    try:
+        response_wrapper = await api_post(
+            "/api/top100.reject",
+            data=data,
+            use_bot_token=True,
+        )
+        async with response_wrapper as response:
+            if response.status != 200:
+                error_text = await response.text()
+                logger.error("Ошибка API при отклонении ТОП-100: %s - %s", response.status, error_text)
+                await message.reply("❌ Ошибка обработки заявки")
+                return
+
+            result = await response.json()
+
+            if not result.get("success"):
+                await message.reply("❌ Ошибка обработки заявки")
+                return
+
+            # Редактируем сообщение-инструкцию
+            try:
+                updated_instruction_text = (
+                    "❌ <b>Заявка отклонена</b>\n\n"
+                    f"Кем: @{moderator_username}\n"
+                    f"Причина: {reason}\n\n"
+                    "✅ Уведомление отправлено пользователю"
+                )
+
+                await message.bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=instruction_message_id,
+                    text=updated_instruction_text,
+                    parse_mode="HTML",
+                )
+            except Exception as e:
+                logger.error("Ошибка редактирования сообщения-инструкции: %s", e)
+
+            # Убираем кнопки из исходного сообщения
+            try:
+                if has_photo:
+                    await message.bot.edit_message_caption(
+                        chat_id=chat_id,
+                        message_id=original_message_id,
+                        caption=original_text,
+                        parse_mode="HTML",
+                        reply_markup=None,
+                    )
+                else:
+                    await message.bot.edit_message_text(
+                        chat_id=chat_id,
+                        message_id=original_message_id,
+                        text=original_text,
+                        parse_mode="HTML",
+                        reply_markup=None,
+                    )
+            except Exception as e:
+                logger.error("Ошибка редактирования исходного сообщения: %s", e)
+    
+    except aiohttp.ClientError as e:
+        logger.error(f"Ошибка сети при отклонении заявки на ТОП-100: {e}")
+        await message.reply("❌ Ошибка подключения к серверу")
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка при отклонении заявки на ТОП-100: {e}")
+        await message.reply("❌ Произошла ошибка")
