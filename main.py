@@ -7,7 +7,6 @@ from aiogram.client.default import DefaultBotProperties
 from config import BOT_TOKEN
 from handlers import (
     gyozen,
-
     waves_new,
     miniapp,
     profile,
