@@ -18,6 +18,7 @@ from handlers import (
     waves_preview,
     moderation,
     notifications,
+    notifications_settings,
 )
 
 async def main():
@@ -44,6 +45,7 @@ async def main():
         balance.router,     # команда !баланс
         waves_preview.router,  # команда !волны
         notifications.router,  # обработка команд уведомлений в теме LEGENDS
+        notifications_settings.router,  # команда /notifications и настройка уведомлений
         miniapp.router,     # команды /start, /build, callback queries, reply_to_message
         group_events.router, # обработка событий выхода из группы
     )
