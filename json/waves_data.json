@@ -13,7 +13,7 @@
         "mod1": "Замедленное оживление",
         "mod1_icon": "slowed-revives-backdrop.svg",
         "mod2": "Приспешницы Иё",
-        "mod2_icon": "disciples-of-iyo-hazard"
+        "mod2_icon": "disciples-of-iyo-hazard.svg"
       },
       {
         "code": "2.1",
@@ -87,7 +87,7 @@
         "mod1": "Скованный",
         "mod1_icon": "incapacitated-wmod.svg",
         "mod2": "Приспешницы Иё",
-        "mod2_icon": "disciples-of-iyo-hazard"
+        "mod2_icon": "disciples-of-iyo-hazard.svg"
       }
     ],
     "spawns": {
@@ -291,22 +291,24 @@
         "mod1": "Усиленные враги",
         "mod1_icon": "empowered-foes-wmod.svg",
         "mod2": "Приспешницы Иё",
-        "mod2_icon": "disciples-of-iyo-hazard"
+        "mod2_icon": "disciples-of-iyo-hazard.svg"
       },
       {
         "code": "2.8",
         "mod1": "Замедленное оживление",
         "mod1_icon": "slowed-revives-wmod.svg",
         "mod2": "Приспешницы Иё",
-        "mod2_icon": "disciples-of-iyo-hazard"
+        "mod2_icon": "disciples-of-iyo-hazard.svg"
       }
     ],
     "spawns": {
       "spawn1": "Лес",
       "spawn1_type1": "Лес - Лево",
       "spawn1_type1_alias": "Лес L",
-      "spawn1_type2": "Лес - Право",
-      "spawn1_type2_alias": "Лес R",
+      "spawn1_type2": "Лес - Середина",
+      "spawn1_type2_alias": "Лес M",
+      "spawn1_type3": "Лес - Право",
+      "spawn1_type3_alias": "Лес R",
       "spawn2": "Хижина",
       "spawn3": "Корабль",
       "spawn4": "Пляж"
@@ -355,7 +357,7 @@
         "mod1": "Скованный",
         "mod1_icon": "incapacitated-wmod.svg",
         "mod2": "Приспешницы Иё",
-        "mod2_icon": "disciples-of-iyo-hazard"
+        "mod2_icon": "disciples-of-iyo-hazard.svg"
       },
       {
         "code": "2.3",

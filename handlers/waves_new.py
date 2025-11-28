@@ -343,7 +343,7 @@ def _resolve_map_slug(map_name: Optional[str]) -> Optional[str]:
 SPAWN_LAYOUT = {
     "the-shores-of-vengeance": [
         ["spawn1"],
-        ["spawn1_type1", "spawn1_type2"],
+        ["spawn1_type1", "spawn1_type2", "spawn1_type3"],
         ["spawn2"],
         ["spawn3"],
         ["spawn4"],
