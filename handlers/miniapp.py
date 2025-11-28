@@ -43,7 +43,7 @@ async def start_command(message: Message):
 • Создание, редактирование и публикация билдов
 • Система уровней мастерства в различных категориях
 • Трофеи и достижения
-• Еженедельные задания HellMode и ТОП-100
+• Еженедельные задания HellMode и ТОП-50
 • И многое другое!
 
 <b>⚡ Быстрые команды в чате:</b>
@@ -385,11 +385,11 @@ async def handle_rejection_reason(message: Message):
                 await handle_hellmode_quest_rejection(message, pending_key)
                 return
         
-        # Проверяем, не является ли это ответом на сообщение об отклонении ТОП-100
-        if hasattr(reject_top100_callback, '_pending_rejects'):
+        # Проверяем, не является ли это ответом на сообщение об отклонении ТОП-50
+        if hasattr(reject_top50_callback, '_pending_rejects'):
             pending_key = replied_message.message_id
-            if pending_key in reject_top100_callback._pending_rejects:
-                await handle_top100_rejection(message, pending_key)
+            if pending_key in reject_top50_callback._pending_rejects:
+                await handle_top50_rejection(message, pending_key)
                 return
         
     except Exception as e:
@@ -983,13 +983,13 @@ async def reject_hellmode_quest_callback(callback: CallbackQuery):
         await callback.answer("❌ Произошла ошибка", show_alert=True)
 
 
-# ========== ОБРАБОТЧИКИ ЗАЯВОК НА ТОП-100 ==========
+# ========== ОБРАБОТЧИКИ ЗАЯВОК НА ТОП-50 ==========
 
-@router.callback_query(F.data.startswith("approve_top100:"))
-async def approve_top100_callback(callback: CallbackQuery):
-    """Обработка кнопки 'Одобрить' для заявки на ТОП-100"""
+@router.callback_query(F.data.startswith("approve_top50:"))
+async def approve_top50_callback(callback: CallbackQuery):
+    """Обработка кнопки 'Одобрить' для заявки на ТОП-50"""
     try:
-        # Парсинг callback_data: approve_top100:{user_id}:{category}
+        # Парсинг callback_data: approve_top50:{user_id}:{category}
         parts = callback.data.split(":")
         if len(parts) != 3:
             await callback.answer("❌ Ошибка формата данных", show_alert=True)
@@ -1009,7 +1009,7 @@ async def approve_top100_callback(callback: CallbackQuery):
         
         try:
             response_wrapper = await api_post(
-                "/api/top100.approve",
+                "/api/top50.approve",
                 data=data,
                 use_bot_token=True,
             )
@@ -1017,7 +1017,7 @@ async def approve_top100_callback(callback: CallbackQuery):
                 if response.status != 200:
                     error_text = await response.text()
                     logger.error(
-                        "Ошибка API при одобрении ТОП-100: %s - %s",
+                        "Ошибка API при одобрении ТОП-50: %s - %s",
                         response.status,
                         error_text,
                     )
@@ -1048,7 +1048,7 @@ async def approve_top100_callback(callback: CallbackQuery):
 
                     await callback.bot.send_message(
                         chat_id=CONGRATULATION_GROUP_ID,
-                        text=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание ТОП-100 в категории {category_name} и получил {reward} Магатама 🪙",
+                        text=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание ТОП-50 в категории {category_name} и получил {reward} Магатама 🪙",
                         parse_mode="HTML",
                     )
                 except Exception as e:
@@ -1076,25 +1076,25 @@ async def approve_top100_callback(callback: CallbackQuery):
                 await callback.answer("✅ Заявка одобрена!", show_alert=False)
 
         except aiohttp.ClientError as e:
-            logger.error("Ошибка сети при одобрении заявки на ТОП-100: %s", e)
+            logger.error("Ошибка сети при одобрении заявки на ТОП-50: %s", e)
             await callback.answer("❌ Ошибка подключения к серверу", show_alert=True)
         except Exception as e:
-            logger.error("Неожиданная ошибка при одобрении заявки на ТОП-100: %s", e)
+            logger.error("Неожиданная ошибка при одобрении заявки на ТОП-50: %s", e)
             await callback.answer("❌ Произошла ошибка", show_alert=True)
         
     except ValueError as e:
         logger.error(f"Ошибка парсинга callback данных: {e}")
         await callback.answer("❌ Ошибка обработки запроса", show_alert=True)
     except Exception as e:
-        logger.error(f"Ошибка обработки одобрения заявки на ТОП-100: {e}")
+        logger.error(f"Ошибка обработки одобрения заявки на ТОП-50: {e}")
         await callback.answer("❌ Произошла ошибка", show_alert=True)
 
 
-@router.callback_query(F.data.startswith("reject_top100:"))
-async def reject_top100_callback(callback: CallbackQuery):
-    """Обработка кнопки 'Отклонить' для заявки на ТОП-100"""
+@router.callback_query(F.data.startswith("reject_top50:"))
+async def reject_top50_callback(callback: CallbackQuery):
+    """Обработка кнопки 'Отклонить' для заявки на ТОП-50"""
     try:
-        # Парсинг callback_data: reject_top100:{user_id}:{category}
+        # Парсинг callback_data: reject_top50:{user_id}:{category}
         parts = callback.data.split(":")
         if len(parts) != 3:
             await callback.answer("❌ Ошибка формата данных", show_alert=True)
@@ -1117,12 +1117,12 @@ async def reject_top100_callback(callback: CallbackQuery):
         )
         
         # Сохраняем состояние ожидания причины
-        if not hasattr(reject_top100_callback, '_pending_rejects'):
-            reject_top100_callback._pending_rejects = {}
+        if not hasattr(reject_top50_callback, '_pending_rejects'):
+            reject_top50_callback._pending_rejects = {}
         
         original_text = callback.message.text or callback.message.caption or ""
         
-        reject_top100_callback._pending_rejects[instruction_msg.message_id] = {
+        reject_top50_callback._pending_rejects[instruction_msg.message_id] = {
             'user_id': target_user_id,
             'category': category,
             'original_message_id': callback.message.message_id,
@@ -1137,13 +1137,13 @@ async def reject_top100_callback(callback: CallbackQuery):
         logger.error(f"Ошибка парсинга callback данных: {e}")
         await callback.answer("❌ Ошибка обработки запроса", show_alert=True)
     except Exception as e:
-        logger.error(f"Ошибка обработки отклонения заявки на ТОП-100: {e}")
+        logger.error(f"Ошибка обработки отклонения заявки на ТОП-50: {e}")
         await callback.answer("❌ Произошла ошибка", show_alert=True)
 
 
-async def handle_top100_rejection(message: Message, pending_key: int):
-    """Обработка отклонения заявки на ТОП-100"""
-    pending_data = reject_top100_callback._pending_rejects.pop(pending_key)
+async def handle_top50_rejection(message: Message, pending_key: int):
+    """Обработка отклонения заявки на ТОП-50"""
+    pending_data = reject_top50_callback._pending_rejects.pop(pending_key)
     target_user_id = pending_data['user_id']
     category = pending_data['category']
     original_message_id = pending_data['original_message_id']
@@ -1166,14 +1166,14 @@ async def handle_top100_rejection(message: Message, pending_key: int):
     
     try:
         response_wrapper = await api_post(
-            "/api/top100.reject",
+            "/api/top50.reject",
             data=data,
             use_bot_token=True,
         )
         async with response_wrapper as response:
             if response.status != 200:
                 error_text = await response.text()
-                logger.error("Ошибка API при отклонении ТОП-100: %s - %s", response.status, error_text)
+                logger.error("Ошибка API при отклонении ТОП-50: %s - %s", response.status, error_text)
                 await message.reply("❌ Ошибка обработки заявки")
                 return
 
@@ -1223,8 +1223,8 @@ async def handle_top100_rejection(message: Message, pending_key: int):
                 logger.error("Ошибка редактирования исходного сообщения: %s", e)
     
     except aiohttp.ClientError as e:
-        logger.error(f"Ошибка сети при отклонении заявки на ТОП-100: {e}")
+        logger.error(f"Ошибка сети при отклонении заявки на ТОП-50: {e}")
         await message.reply("❌ Ошибка подключения к серверу")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка при отклонении заявки на ТОП-100: {e}")
+        logger.error(f"Неожиданная ошибка при отклонении заявки на ТОП-50: {e}")
         await message.reply("❌ Произошла ошибка")
