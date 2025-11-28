@@ -91,16 +91,19 @@ async def _send_notification_to_user(
 ) -> bool:
     """
     Отправляет уведомление пользователю в личку.
-    Пересылает сообщение и отправляет отдельное сообщение с кнопками.
+    Отправляет текст сообщения с кнопками (пересылка из темы форума не работает).
     Возвращает True при успешной отправке, False при ошибке.
     """
     try:
-        # Пересылаем сообщение
-        await bot.forward_message(
-            chat_id=user_id,
-            from_chat_id=original_message.chat.id,
-            message_id=original_message.message_id
-        )
+        # Получаем текст сообщения
+        message_text = original_message.text or original_message.caption or ""
+        author_name = original_message.from_user.full_name if original_message.from_user else "Неизвестный"
+        
+        # Формируем текст уведомления
+        notification_text = f"🔔 <b>Новое уведомление о поиске игроков</b>\n\n"
+        notification_text += f"<b>От:</b> {author_name}\n"
+        if message_text:
+            notification_text += f"\n{message_text}"
         
         # Создаем кнопки
         message_url = _format_message_url(
@@ -118,8 +121,9 @@ async def _send_notification_to_user(
         # Отправляем сообщение с кнопками
         await bot.send_message(
             chat_id=user_id,
-            text="🔔 Новое уведомление о поиске игроков",
-            reply_markup=keyboard
+            text=notification_text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
         )
         
         return True
@@ -167,7 +171,9 @@ async def handle_notification_commands(message: Message):
         f"от пользователя {message.from_user.id}"
     )
     
-    # Обрабатываем каждую найденную команду
+    # Собираем всех уникальных подписчиков для всех найденных команд
+    all_subscribers = set()
+    
     for notification_type in commands:
         try:
             # Получаем список подписчиков через API
@@ -191,24 +197,11 @@ async def handle_notification_commands(message: Message):
                     logger.info(f"Нет подписчиков для типа уведомления {notification_type}")
                     continue
                 
+                # Добавляем подписчиков в общий набор (set автоматически уберет дубликаты)
+                all_subscribers.update(subscribers)
+                
                 logger.info(
                     f"Найдено {len(subscribers)} подписчиков для типа {notification_type}"
-                )
-                
-                # Отправляем уведомления каждому подписчику
-                success_count = 0
-                for user_id in subscribers:
-                    if await _send_notification_to_user(
-                        message.bot,
-                        user_id,
-                        message,
-                        notification_type
-                    ):
-                        success_count += 1
-                
-                logger.info(
-                    f"Отправлено {success_count} из {len(subscribers)} уведомлений "
-                    f"для типа {notification_type}"
                 )
         
         except Exception as e:
@@ -216,4 +209,27 @@ async def handle_notification_commands(message: Message):
                 f"Ошибка при обработке команды {notification_type}: {e}",
                 exc_info=True
             )
+    
+    # Отправляем уведомления каждому уникальному подписчику только один раз
+    if all_subscribers:
+        logger.info(
+            f"Всего уникальных подписчиков для всех команд: {len(all_subscribers)}"
+        )
+        
+        success_count = 0
+        for user_id in all_subscribers:
+            if await _send_notification_to_user(
+                message.bot,
+                user_id,
+                message,
+                ", ".join(commands)  # Передаем список команд для логирования
+            ):
+                success_count += 1
+        
+        logger.info(
+            f"Отправлено {success_count} из {len(all_subscribers)} уведомлений "
+            f"для команд: {commands}"
+        )
+    else:
+        logger.info("Нет подписчиков для отправки уведомлений")
 
