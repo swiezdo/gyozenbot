@@ -1,6 +1,7 @@
 # /gyozenbot/handlers/notifications.py
 import logging
 import re
+import asyncio
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -31,19 +32,16 @@ def _is_legends_topic(message: Message) -> bool:
     В Telegram форумах message_thread_id может быть равен ID первого сообщения темы.
     """
     if message.chat.id != GROUP_ID:
-        logger.debug(f"Chat ID не совпадает: {message.chat.id} != {GROUP_ID}")
         return False
     
     if not message.is_topic_message:
-        logger.debug("Сообщение не в теме")
         return False
     
-    logger.debug(
-        f"Проверка темы: message_thread_id={message.message_thread_id}, "
-        f"LEGENDS_TOPIC_FIRST_MESSAGE={LEGENDS_TOPIC_FIRST_MESSAGE}"
-    )
-    
     if message.message_thread_id != LEGENDS_TOPIC_FIRST_MESSAGE:
+        logger.info(
+            f"Сообщение не в теме LEGENDS: thread_id={message.message_thread_id}, "
+            f"ожидается={LEGENDS_TOPIC_FIRST_MESSAGE}"
+        )
         return False
     
     return True
@@ -91,19 +89,16 @@ async def _send_notification_to_user(
 ) -> bool:
     """
     Отправляет уведомление пользователю в личку.
-    Отправляет текст сообщения с кнопками (пересылка из темы форума не работает).
+    Пересылает сообщение и отправляет отдельное сообщение с кнопками.
     Возвращает True при успешной отправке, False при ошибке.
     """
     try:
-        # Получаем текст сообщения
-        message_text = original_message.text or original_message.caption or ""
-        author_name = original_message.from_user.full_name if original_message.from_user else "Неизвестный"
-        
-        # Формируем текст уведомления
-        notification_text = f"🔔 <b>Новое уведомление о поиске игроков</b>\n\n"
-        notification_text += f"<b>От:</b> {author_name}\n"
-        if message_text:
-            notification_text += f"\n{message_text}"
+        # Пересылаем сообщение
+        await bot.forward_message(
+            chat_id=user_id,
+            from_chat_id=original_message.chat.id,
+            message_id=original_message.message_id
+        )
         
         # Создаем кнопки
         message_url = _format_message_url(
@@ -121,9 +116,8 @@ async def _send_notification_to_user(
         # Отправляем сообщение с кнопками
         await bot.send_message(
             chat_id=user_id,
-            text=notification_text,
-            reply_markup=keyboard,
-            parse_mode="HTML"
+            text="🔔 Новое уведомление о поиске игроков",
+            reply_markup=keyboard
         )
         
         return True
@@ -146,18 +140,13 @@ async def handle_notification_commands(message: Message):
     """
     # Проверяем, что это группа/супергруппа
     if message.chat.type not in ("group", "supergroup"):
-        logger.debug(f"Сообщение не в группе/супергруппе: {message.chat.type}")
         return
     
     # Проверяем, что сообщение в теме LEGENDS
     if not _is_legends_topic(message):
-        logger.debug(
-            f"Сообщение не в теме LEGENDS: chat_id={message.chat.id}, "
-            f"is_topic={message.is_topic_message}, thread_id={message.message_thread_id}"
-        )
         return
     
-    logger.debug(f"Проверяем текст сообщения: {message.text}")
+    logger.info(f"Проверяем текст сообщения в теме LEGENDS: {message.text}")
     
     # Извлекаем команды из текста
     commands = _extract_commands(message.text or '')
@@ -217,6 +206,9 @@ async def handle_notification_commands(message: Message):
         )
         
         success_count = 0
+        # Отправляем уведомления с задержкой, чтобы не превысить лимиты Telegram API
+        # Telegram позволяет отправлять до 20 сообщений в секунду в личку
+        # Используем задержку 0.05 секунды (20 сообщений/сек)
         for user_id in all_subscribers:
             if await _send_notification_to_user(
                 message.bot,
@@ -225,6 +217,9 @@ async def handle_notification_commands(message: Message):
                 ", ".join(commands)  # Передаем список команд для логирования
             ):
                 success_count += 1
+            
+            # Небольшая задержка между отправками, чтобы не превысить rate limit
+            await asyncio.sleep(0.05)
         
         logger.info(
             f"Отправлено {success_count} из {len(all_subscribers)} уведомлений "
