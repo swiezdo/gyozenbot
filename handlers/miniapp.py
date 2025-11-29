@@ -19,6 +19,7 @@ from config import (
     BOT_TOKEN,
     GROUP_ID,
     CONGRATULATION_GROUP_ID,
+    TROPHY_GROUP_CHAT_ID,
 )
 from api_client import api_get, api_post
 
@@ -391,6 +392,12 @@ async def handle_rejection_reason(message: Message):
             if pending_key in reject_top50_callback._pending_rejects:
                 await handle_top50_rejection(message, pending_key)
                 return
+        
+        # Проверяем, не является ли это ответом на баг-репорт
+        # Проверяем, что сообщение в группе трофеев
+        if message.chat.id == TROPHY_GROUP_CHAT_ID:
+            await handle_feedback_reply(message, replied_message)
+            return
         
     except Exception as e:
         logger.error(f"Ошибка обработки причины отклонения: {e}")
@@ -1228,3 +1235,117 @@ async def handle_top50_rejection(message: Message, pending_key: int):
     except Exception as e:
         logger.error(f"Неожиданная ошибка при отклонении заявки на ТОП-50: {e}")
         await message.reply("❌ Произошла ошибка")
+
+
+async def handle_feedback_reply(message: Message, replied_message: Message):
+    """Обработка reply на баг-репорт"""
+    try:
+        group_message_id = replied_message.message_id
+        
+        # Получаем user_id из API
+        try:
+            response_wrapper = await api_get(
+                f"/api/feedback.getUserByMessageId?group_message_id={group_message_id}",
+                use_bot_token=True
+            )
+            async with response_wrapper as response:
+                if response.status == 404:
+                    # Это не баг-репорт, игнорируем
+                    return
+                
+                if response.status != 200:
+                    logger.error(f"Ошибка API при получении user_id для feedback: {response.status}")
+                    return
+                
+                data = await response.json()
+                target_user_id = data.get('user_id')
+                
+                if not target_user_id:
+                    logger.warning(f"user_id не найден в ответе API для message_id={group_message_id}")
+                    return
+                
+                # Получаем текст ответа
+                reply_text = message.text or message.caption or ""
+                if not reply_text.strip():
+                    # Если нет текста, не отправляем ответ
+                    return
+                
+                # Извлекаем текст баг-репорта из оригинального сообщения
+                original_text = replied_message.text or replied_message.caption or ""
+                feedback_description = ""
+                
+                # Парсим текст сообщения, чтобы извлечь описание
+                # Формат: "💬 Описание:\n{текст}\n💡 ..."
+                if "💬 Описание:" in original_text or "Описание:" in original_text:
+                    # Ищем блок с описанием
+                    lines = original_text.split('\n')
+                    in_description = False
+                    description_lines = []
+                    
+                    for line in lines:
+                        if "💬 Описание:" in line or "Описание:" in line:
+                            in_description = True
+                            continue
+                        if in_description:
+                            # Останавливаемся на следующем блоке (💡 или пустая строка перед следующим блоком)
+                            if line.strip().startswith('💡') or (line.strip() == '' and description_lines):
+                                break
+                            if line.strip():
+                                description_lines.append(line.strip())
+                    
+                    feedback_description = '\n'.join(description_lines).strip()
+                
+                # Если не удалось извлечь через парсинг, пробуем получить из caption (для медиа)
+                if not feedback_description and replied_message.caption:
+                    original_text = replied_message.caption
+                    if "💬 Описание:" in original_text or "Описание:" in original_text:
+                        lines = original_text.split('\n')
+                        in_description = False
+                        description_lines = []
+                        
+                        for line in lines:
+                            if "💬 Описание:" in line or "Описание:" in line:
+                                in_description = True
+                                continue
+                            if in_description:
+                                if line.strip().startswith('💡') or (line.strip() == '' and description_lines):
+                                    break
+                                if line.strip():
+                                    description_lines.append(line.strip())
+                        
+                        feedback_description = '\n'.join(description_lines).strip()
+                
+                # Формируем красивое сообщение для пользователя
+                user_message = "💬 <b>Ответ на ваш баг-репорт:</b>\n\n"
+                user_message += f"{reply_text}\n\n"
+                
+                if feedback_description:
+                    user_message += "━━━━━━━━━━━━━━━━━━━━\n\n"
+                    user_message += "📝 <b>Ваш баг-репорт:</b>\n"
+                    user_message += f"<i>{feedback_description}</i>"
+                
+                # Отправляем ответ пользователю в личку
+                try:
+                    await message.bot.send_message(
+                        chat_id=target_user_id,
+                        text=user_message,
+                        parse_mode="HTML"
+                    )
+                    
+                    logger.info(f"Ответ на баг-репорт отправлен пользователю {target_user_id}")
+                    
+                except Exception as e:
+                    # Если пользователь заблокировал бота, логируем, но не падаем
+                    error_message = str(e).lower()
+                    if "blocked" in error_message or "bot was blocked" in error_message:
+                        logger.warning(f"Пользователь {target_user_id} заблокировал бота, не удалось отправить ответ на баг-репорт")
+                    else:
+                        logger.error(f"Ошибка отправки ответа на баг-репорт пользователю {target_user_id}: {e}")
+        
+        except aiohttp.ClientError as e:
+            logger.error(f"Ошибка сети при получении user_id для feedback: {e}")
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при обработке reply на баг-репорт: {e}")
+    
+    except Exception as e:
+        logger.error(f"Ошибка обработки reply на баг-репорт: {e}")
