@@ -8,9 +8,10 @@ Telegram Bot handler для мини-приложения Tsushima
 import asyncio
 import aiohttp
 import logging
+import os
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, InputMediaPhoto
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, InputMediaPhoto, FSInputFile
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import (
@@ -1270,15 +1271,18 @@ async def handle_feedback_reply(message: Message, replied_message: Message):
                     # Если нет текста, не отправляем ответ
                     return
                 
-                # Извлекаем текст баг-репорта из оригинального сообщения
+                # Сохраняем оригинальный текст сообщения для редактирования
                 original_text = replied_message.text or replied_message.caption or ""
+                
+                # Извлекаем текст баг-репорта из оригинального сообщения
                 feedback_description = ""
+                text_to_parse = original_text
                 
                 # Парсим текст сообщения, чтобы извлечь описание
                 # Формат: "💬 Описание:\n{текст}\n💡 ..."
-                if "💬 Описание:" in original_text or "Описание:" in original_text:
+                if "💬 Описание:" in text_to_parse or "Описание:" in text_to_parse:
                     # Ищем блок с описанием
-                    lines = original_text.split('\n')
+                    lines = text_to_parse.split('\n')
                     in_description = False
                     description_lines = []
                     
@@ -1296,10 +1300,10 @@ async def handle_feedback_reply(message: Message, replied_message: Message):
                     feedback_description = '\n'.join(description_lines).strip()
                 
                 # Если не удалось извлечь через парсинг, пробуем получить из caption (для медиа)
-                if not feedback_description and replied_message.caption:
-                    original_text = replied_message.caption
-                    if "💬 Описание:" in original_text or "Описание:" in original_text:
-                        lines = original_text.split('\n')
+                if not feedback_description and replied_message.caption and replied_message.caption != original_text:
+                    text_to_parse = replied_message.caption
+                    if "💬 Описание:" in text_to_parse or "Описание:" in text_to_parse:
+                        lines = text_to_parse.split('\n')
                         in_description = False
                         description_lines = []
                         
@@ -1324,15 +1328,78 @@ async def handle_feedback_reply(message: Message, replied_message: Message):
                     user_message += "📝 <b>Ваш баг-репорт:</b>\n"
                     user_message += f"<i>{feedback_description}</i>"
                 
-                # Отправляем ответ пользователю в личку
+                # Отправляем ответ пользователю в личку с картинкой
                 try:
-                    await message.bot.send_message(
-                        chat_id=target_user_id,
-                        text=user_message,
-                        parse_mode="HTML"
-                    )
+                    banner_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "banner.png")
+                    
+                    if os.path.exists(banner_path):
+                        photo = FSInputFile(banner_path)
+                        await message.bot.send_photo(
+                            chat_id=target_user_id,
+                            photo=photo,
+                            caption=user_message,
+                            parse_mode="HTML"
+                        )
+                    else:
+                        # Если файл не найден, отправляем просто текст
+                        logger.warning(f"Файл banner.png не найден по пути {banner_path}, отправляем текст без картинки")
+                        await message.bot.send_message(
+                            chat_id=target_user_id,
+                            text=user_message,
+                            parse_mode="HTML"
+                        )
                     
                     logger.info(f"Ответ на баг-репорт отправлен пользователю {target_user_id}")
+                    
+                    # Получаем информацию об админе
+                    admin_name = message.from_user.full_name or message.from_user.username or "Администратор"
+                    if message.from_user.username:
+                        admin_mention = f"@{message.from_user.username}"
+                    else:
+                        admin_mention = admin_name
+                    
+                    # Редактируем сообщение с баг-репортом, добавляя информацию об ответе
+                    updated_text = original_text
+                    if not updated_text.endswith('\n'):
+                        updated_text += '\n'
+                    updated_text += f"\n✅ {admin_mention} ответил на баг-репорт пользователя"
+                    
+                    # Редактируем сообщение (для текстовых сообщений или медиа с caption)
+                    try:
+                        if replied_message.text:
+                            # Текстовое сообщение
+                            await message.bot.edit_message_text(
+                                chat_id=TROPHY_GROUP_CHAT_ID,
+                                message_id=group_message_id,
+                                text=updated_text,
+                                parse_mode="HTML"
+                            )
+                        elif replied_message.caption:
+                            # Медиа с caption
+                            await message.bot.edit_message_caption(
+                                chat_id=TROPHY_GROUP_CHAT_ID,
+                                message_id=group_message_id,
+                                caption=updated_text,
+                                parse_mode="HTML"
+                            )
+                    except Exception as edit_error:
+                        logger.warning(f"Не удалось отредактировать сообщение с баг-репортом: {edit_error}")
+                    
+                    # Удаляем запись из таблицы через API
+                    try:
+                        from api_client import api_delete
+                        delete_response_wrapper = await api_delete(
+                            "/api/feedback.deleteByMessageId",
+                            params={"group_message_id": group_message_id},
+                            use_bot_token=True
+                        )
+                        async with delete_response_wrapper as delete_response:
+                            if delete_response.status == 200:
+                                logger.info(f"Запись feedback_message для message_id={group_message_id} удалена из БД")
+                            else:
+                                logger.warning(f"Не удалось удалить запись из БД: статус {delete_response.status}")
+                    except Exception as delete_error:
+                        logger.error(f"Ошибка при удалении записи из БД: {delete_error}")
                     
                 except Exception as e:
                     # Если пользователь заблокировал бота, логируем, но не падаем

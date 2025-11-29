@@ -55,12 +55,14 @@ async def api_post(
 async def api_delete(
     path: str,
     *,
+    params: Optional[Mapping[str, Any]] = None,
     headers: Optional[Mapping[str, str]] = None,
     use_bot_token: bool = False,
 ) -> aiohttp.ClientResponse:
     return await _request(
         "DELETE",
         path,
+        params=params,
         headers=headers,
         use_bot_token=use_bot_token,
     )
