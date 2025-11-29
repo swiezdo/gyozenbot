@@ -1,7 +1,8 @@
 # /gyozenbot/handlers/group_events.py
 import logging
+import os
 from aiogram import Router, F
-from aiogram.types import ChatMemberUpdated, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import ChatMemberUpdated, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, FSInputFile
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import GROUP_ID, MINI_APP_URL
@@ -86,12 +87,23 @@ async def handle_member_status_change(event: ChatMemberUpdated):
                 ))
                 
                 # Отправляем сообщение пользователю в личку
-                await event.bot.send_message(
-                    chat_id=user_id,
-                    text=welcome_text,
-                    reply_markup=builder.as_markup(),
-                    parse_mode="HTML"
-                )
+                banner_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "banner.png")
+                if os.path.exists(banner_path):
+                    photo = FSInputFile(banner_path)
+                    await event.bot.send_photo(
+                        chat_id=user_id,
+                        photo=photo,
+                        caption=welcome_text,
+                        reply_markup=builder.as_markup(),
+                        parse_mode="HTML"
+                    )
+                else:
+                    await event.bot.send_message(
+                        chat_id=user_id,
+                        text=welcome_text,
+                        reply_markup=builder.as_markup(),
+                        parse_mode="HTML"
+                    )
                 
                 logger.info(f"Приветственное сообщение отправлено пользователю {user_id}")
                 

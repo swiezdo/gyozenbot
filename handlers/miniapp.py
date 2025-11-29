@@ -253,20 +253,39 @@ async def approve_mastery_callback(callback: CallbackQuery):
                             logger.error("Ошибка получения username пользователя %s: %s", target_user_id, e)
                             user_mention = username if username else psn_id
 
-                        await callback.bot.send_message(
-                            chat_id=CONGRATULATION_GROUP_ID,
-                            text=(
-                                "🎉 Участник {mention} ({psn}) повысил свой уровень в категории "
-                                "<b>{category}</b> — Уровень {level_num}, {level_name}"
-                            ).format(
-                                mention=user_mention,
-                                psn=psn_id,
-                                category=category_name,
-                                level_num=next_level,
-                                level_name=level_name,
-                            ),
-                            parse_mode="HTML",
-                        )
+                        banner_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "banner.png")
+                        if os.path.exists(banner_path):
+                            photo = FSInputFile(banner_path)
+                            await callback.bot.send_photo(
+                                chat_id=CONGRATULATION_GROUP_ID,
+                                photo=photo,
+                                caption=(
+                                    "🎉 Участник {mention} ({psn}) повысил свой уровень в категории "
+                                    "<b>{category}</b> — Уровень {level_num}, {level_name}"
+                                ).format(
+                                    mention=user_mention,
+                                    psn=psn_id,
+                                    category=category_name,
+                                    level_num=next_level,
+                                    level_name=level_name,
+                                ),
+                                parse_mode="HTML",
+                            )
+                        else:
+                            await callback.bot.send_message(
+                                chat_id=CONGRATULATION_GROUP_ID,
+                                text=(
+                                    "🎉 Участник {mention} ({psn}) повысил свой уровень в категории "
+                                    "<b>{category}</b> — Уровень {level_num}, {level_name}"
+                                ).format(
+                                    mention=user_mention,
+                                    psn=psn_id,
+                                    category=category_name,
+                                    level_num=next_level,
+                                    level_name=level_name,
+                                ),
+                                parse_mode="HTML",
+                            )
                     except Exception as e:
                         logger.error("Ошибка отправки сообщения в группу поздравлений: %s", e)
 
@@ -741,11 +760,21 @@ async def approve_trophy_callback(callback: CallbackQuery):
                             if username:
                                 user_mention = username
 
-                        await callback.bot.send_message(
-                            chat_id=GROUP_ID,
-                            text=f"🎉 Участник {user_mention} ({psn_id}) получил трофей <b>{trophy_name}</b>!",
-                            parse_mode="HTML",
-                        )
+                        banner_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "banner.png")
+                        if os.path.exists(banner_path):
+                            photo = FSInputFile(banner_path)
+                            await callback.bot.send_photo(
+                                chat_id=GROUP_ID,
+                                photo=photo,
+                                caption=f"🎉 Участник {user_mention} ({psn_id}) получил трофей <b>{trophy_name}</b>!",
+                                parse_mode="HTML",
+                            )
+                        else:
+                            await callback.bot.send_message(
+                                chat_id=GROUP_ID,
+                                text=f"🎉 Участник {user_mention} ({psn_id}) получил трофей <b>{trophy_name}</b>!",
+                                parse_mode="HTML",
+                            )
                     except Exception as e:
                         logger.error("Ошибка отправки сообщения в группу поздравлений: %s", e)
 
@@ -897,11 +926,21 @@ async def approve_hellmode_quest_callback(callback: CallbackQuery):
                     except Exception as e:
                         logger.error("Ошибка получения username пользователя %s: %s", target_user_id, e)
 
-                    await callback.bot.send_message(
-                        chat_id=CONGRATULATION_GROUP_ID,
-                        text=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание HellMode и получил {reward} Магатама 🪙",
-                        parse_mode="HTML",
-                    )
+                    banner_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "banner.png")
+                    if os.path.exists(banner_path):
+                        photo = FSInputFile(banner_path)
+                        await callback.bot.send_photo(
+                            chat_id=CONGRATULATION_GROUP_ID,
+                            photo=photo,
+                            caption=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание HellMode и получил {reward} Магатама",
+                            parse_mode="HTML",
+                        )
+                    else:
+                        await callback.bot.send_message(
+                            chat_id=CONGRATULATION_GROUP_ID,
+                            text=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание HellMode и получил {reward} Магатама",
+                            parse_mode="HTML",
+                        )
                 except Exception as e:
                     logger.error("Ошибка отправки сообщения в группу поздравлений: %s", e)
 
@@ -1054,11 +1093,21 @@ async def approve_top50_callback(callback: CallbackQuery):
                     except Exception as e:
                         logger.error("Ошибка получения username пользователя %s: %s", target_user_id, e)
 
-                    await callback.bot.send_message(
-                        chat_id=CONGRATULATION_GROUP_ID,
-                        text=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание ТОП-50 в категории {category_name} и получил {reward} Магатама 🪙",
-                        parse_mode="HTML",
-                    )
+                    banner_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "banner.png")
+                    if os.path.exists(banner_path):
+                        photo = FSInputFile(banner_path)
+                        await callback.bot.send_photo(
+                            chat_id=CONGRATULATION_GROUP_ID,
+                            photo=photo,
+                            caption=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание ТОП-50 в категории {category_name} и получил {reward} Магатама",
+                            parse_mode="HTML",
+                        )
+                    else:
+                        await callback.bot.send_message(
+                            chat_id=CONGRATULATION_GROUP_ID,
+                            text=f"🎉 Участник {user_mention} ({psn_id}) выполнил еженедельное задание ТОП-50 в категории {category_name} и получил {reward} Магатама",
+                            parse_mode="HTML",
+                        )
                 except Exception as e:
                     logger.error("Ошибка отправки сообщения в группу поздравлений: %s", e)
 
