@@ -1,6 +1,7 @@
 # /gyozenbot/handlers/snippets.py
 import logging
 import re
+import asyncio
 from aiogram import Router, F, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -187,9 +188,9 @@ def build_main_menu_keyboard() -> InlineKeyboardMarkup:
     """Строит клавиатуру главного меню"""
     builder = InlineKeyboardBuilder()
     
-    builder.row(InlineKeyboardButton(text="Все сниппеты", callback_data="snippets_all"))
-    builder.row(InlineKeyboardButton(text="Мои сниппеты", callback_data="snippets_my"))
-    builder.row(InlineKeyboardButton(text="Выход", callback_data="snippets_exit"))
+    builder.row(InlineKeyboardButton(text="📋 Все сниппеты", callback_data="snippets_all"))
+    builder.row(InlineKeyboardButton(text="👤 Мои сниппеты", callback_data="snippets_my"))
+    builder.row(InlineKeyboardButton(text="❌ Выход", callback_data="snippets_exit"))
     
     return builder.as_markup()
 
@@ -213,7 +214,7 @@ def build_snippets_keyboard(snippets: list, prefix: str = "snippet_") -> InlineK
             builder.row(*row)
     
     # Кнопка "Назад"
-    builder.row(InlineKeyboardButton(text="Назад", callback_data="snippets_back"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="snippets_back"))
     
     return builder.as_markup()
 
@@ -237,10 +238,10 @@ def build_my_snippets_keyboard(snippets: list) -> InlineKeyboardMarkup:
             builder.row(*row)
     
     # Кнопка "Создать сниппет"
-    builder.row(InlineKeyboardButton(text="Создать сниппет", callback_data="snippet_create"))
+    builder.row(InlineKeyboardButton(text="➕ Создать сниппет", callback_data="snippet_create"))
     
     # Кнопка "Назад"
-    builder.row(InlineKeyboardButton(text="Назад", callback_data="snippets_back"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="snippets_back"))
     
     return builder.as_markup()
 
@@ -249,10 +250,10 @@ def build_snippet_management_keyboard(snippet_id: int) -> InlineKeyboardMarkup:
     """Строит клавиатуру управления сниппетом"""
     builder = InlineKeyboardBuilder()
     
-    builder.row(InlineKeyboardButton(text="Просмотр", callback_data=f"snippet_view_{snippet_id}"))
-    builder.row(InlineKeyboardButton(text="Редактировать", callback_data=f"snippet_edit_{snippet_id}"))
-    builder.row(InlineKeyboardButton(text="Удалить", callback_data=f"snippet_delete_{snippet_id}"))
-    builder.row(InlineKeyboardButton(text="Назад", callback_data="snippets_my"))
+    builder.row(InlineKeyboardButton(text="👁️ Просмотр", callback_data=f"snippet_view_{snippet_id}"))
+    builder.row(InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"snippet_edit_{snippet_id}"))
+    builder.row(InlineKeyboardButton(text="🗑️ Удалить", callback_data=f"snippet_delete_{snippet_id}"))
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="snippets_my"))
     
     return builder.as_markup()
 
@@ -261,8 +262,8 @@ def build_delete_confirm_keyboard(snippet_id: int) -> InlineKeyboardMarkup:
     """Строит клавиатуру подтверждения удаления"""
     builder = InlineKeyboardBuilder()
     
-    builder.row(InlineKeyboardButton(text="Да, удалить", callback_data=f"snippet_delete_confirm_{snippet_id}"))
-    builder.row(InlineKeyboardButton(text="Отмена", callback_data=f"snippet_manage_{snippet_id}"))
+    builder.row(InlineKeyboardButton(text="✅ Да, удалить", callback_data=f"snippet_delete_confirm_{snippet_id}"))
+    builder.row(InlineKeyboardButton(text="❌ Отмена", callback_data=f"snippet_manage_{snippet_id}"))
     
     return builder.as_markup()
 
@@ -270,8 +271,25 @@ def build_delete_confirm_keyboard(snippet_id: int) -> InlineKeyboardMarkup:
 def build_cancel_keyboard() -> InlineKeyboardMarkup:
     """Строит клавиатуру с кнопкой отмены"""
     builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(text="Отмена", callback_data="snippet_cancel"))
+    builder.row(InlineKeyboardButton(text="❌ Отмена", callback_data="snippet_cancel"))
     return builder.as_markup()
+
+
+def build_skip_keyboard() -> InlineKeyboardMarkup:
+    """Строит клавиатуру с кнопками пропустить и отмена"""
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="⏭️ Пропустить", callback_data="snippet_skip"))
+    builder.row(InlineKeyboardButton(text="❌ Отмена", callback_data="snippet_cancel"))
+    return builder.as_markup()
+
+
+async def delete_message_after_delay(bot: Bot, chat_id: int, message_id: int, delay: int = 3):
+    """Удаляет сообщение через указанное количество секунд"""
+    await asyncio.sleep(delay)
+    try:
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except Exception as e:
+        logger.debug(f"Не удалось удалить сообщение {message_id}: {e}")
 
 
 @router.message(Command("snippets"))
@@ -355,33 +373,55 @@ async def snippet_trigger_callback(callback: CallbackQuery, state: FSMContext, b
     # Формируем текст
     text = f"*{trigger}*\n\n*{message_text}*"
     
-    # Отправляем сообщение
+    # Удаляем сообщение с панелью управления
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logger.debug(f"Не удалось удалить сообщение с панелью: {e}")
+    
+    # Отправляем сообщение со сниппетом
     if media and media_type:
         if media_type == 'photo':
-            await bot.send_photo(
+            sent_message = await bot.send_photo(
                 chat_id=callback.from_user.id,
                 photo=media,
                 caption=text,
                 parse_mode="Markdown"
             )
         elif media_type == 'video':
-            await bot.send_video(
+            sent_message = await bot.send_video(
                 chat_id=callback.from_user.id,
                 video=media,
                 caption=text,
                 parse_mode="Markdown"
             )
     else:
-        await bot.send_message(
+        sent_message = await bot.send_message(
             chat_id=callback.from_user.id,
             text=text,
             parse_mode="Markdown"
         )
     
-    # Возвращаемся в главное меню
-    keyboard = build_main_menu_keyboard()
-    await callback.message.edit_text("Панель управления сниппетами", reply_markup=keyboard)
-    await state.set_state(SnippetStates.main_menu)
+    # Отправляем панель управления заново после сообщения со сниппетом
+    snippets = await get_all_snippets_api()
+    
+    if not snippets:
+        panel_text = "Все сниппеты Tsushima.Ru\n\nСниппетов пока нет"
+        keyboard = build_snippets_keyboard([])
+    else:
+        panel_text = "Все сниппеты Tsushima.Ru"
+        keyboard = build_snippets_keyboard(snippets)
+    
+    # Отправляем панель управления после сообщения со сниппетом
+    panel_message = await bot.send_message(
+        chat_id=callback.from_user.id,
+        text=panel_text,
+        reply_markup=keyboard
+    )
+    
+    # Сохраняем ID сообщения панели в состоянии
+    await state.update_data(message_id=panel_message.message_id)
+    await state.set_state(SnippetStates.all_snippets)
     await callback.answer()
 
 
@@ -422,30 +462,51 @@ async def snippet_view_callback(callback: CallbackQuery, state: FSMContext, bot:
     # Формируем текст
     text = f"*{trigger}*\n\n*{message_text}*"
     
-    # Отправляем сообщение
+    # Удаляем сообщение с панелью управления
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logger.debug(f"Не удалось удалить сообщение с панелью: {e}")
+    
+    # Отправляем сообщение со сниппетом
     if media and media_type:
         if media_type == 'photo':
-            await bot.send_photo(
+            sent_message = await bot.send_photo(
                 chat_id=callback.from_user.id,
                 photo=media,
                 caption=text,
                 parse_mode="Markdown"
             )
         elif media_type == 'video':
-            await bot.send_video(
+            sent_message = await bot.send_video(
                 chat_id=callback.from_user.id,
                 video=media,
                 caption=text,
                 parse_mode="Markdown"
             )
     else:
-        await bot.send_message(
+        sent_message = await bot.send_message(
             chat_id=callback.from_user.id,
             text=text,
             parse_mode="Markdown"
         )
     
-    await callback.answer("Сниппет отправлен в личку")
+    # Отправляем панель управления заново после сообщения со сниппетом
+    # Возвращаемся в меню управления сниппетом
+    trigger = snippet.get('trigger', '')
+    panel_text = f"Управление сниппетом: *{trigger}*"
+    keyboard = build_snippet_management_keyboard(snippet_id)
+    
+    panel_message = await bot.send_message(
+        chat_id=callback.from_user.id,
+        text=panel_text,
+        reply_markup=keyboard,
+        parse_mode="Markdown"
+    )
+    
+    # Сохраняем ID сообщения панели в состоянии
+    await state.update_data(message_id=panel_message.message_id, managed_snippet_id=snippet_id)
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("snippet_edit_"))
@@ -458,10 +519,17 @@ async def snippet_edit_callback(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Сниппет не найден", show_alert=True)
         return
     
-    await state.update_data(editing_snippet_id=snippet_id, editing_trigger=snippet.get('trigger'))
+    await state.update_data(
+        editing_snippet_id=snippet_id,
+        editing_trigger=snippet.get('trigger'),
+        editing_message=snippet.get('message'),
+        editing_media=snippet.get('media'),
+        editing_media_type=snippet.get('media_type'),
+        message_id=callback.message.message_id
+    )
     
     text = f"Введите новый триггер для сниппета (текущий: {snippet.get('trigger')})"
-    keyboard = build_cancel_keyboard()
+    keyboard = build_skip_keyboard()
     
     await callback.message.edit_text(text, reply_markup=keyboard)
     await state.set_state(SnippetStates.edit_trigger)
@@ -558,6 +626,70 @@ async def snippet_cancel_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+@router.callback_query(F.data == "snippet_skip")
+async def snippet_skip_callback(callback: CallbackQuery, state: FSMContext):
+    """Обработчик кнопки 'Пропустить'"""
+    data = await state.get_data()
+    current_state = await state.get_state()
+    
+    if current_state == SnippetStates.edit_trigger:
+        # Пропускаем изменение триггера, переходим к изменению сообщения
+        snippet_id = data.get('editing_snippet_id')
+        snippet = await get_snippet_by_id_api(snippet_id)
+        
+        if not snippet:
+            await callback.answer("Сниппет не найден", show_alert=True)
+            return
+        
+        text = f"Введите новый текст/описание для сниппета (текущий: {snippet.get('message', '')[:50]}...), если необходимо прикрепите одно изображение или видео"
+        keyboard = build_skip_keyboard()
+        
+        await callback.message.edit_text(text, reply_markup=keyboard)
+        await state.set_state(SnippetStates.edit_message)
+        await callback.answer()
+    elif current_state == SnippetStates.edit_message:
+        # Пропускаем изменение сообщения, сохраняем изменения
+        snippet_id = data.get('editing_snippet_id')
+        snippet = await get_snippet_by_id_api(snippet_id)
+        
+        if not snippet:
+            await callback.answer("Сниппет не найден", show_alert=True)
+            return
+        
+        # Берем триггер - если был изменен, используем новый, иначе оставляем старый
+        new_trigger = data.get('editing_trigger')
+        old_trigger = snippet.get('trigger')
+        
+        # Определяем, был ли изменен триггер
+        trigger_changed = new_trigger and new_trigger != old_trigger
+        
+        # Обновляем только триггер, если он был изменен
+        user_id = callback.from_user.id
+        if trigger_changed:
+            # Триггер был изменен
+            success = await update_snippet_api(snippet_id, user_id, trigger=new_trigger)
+        else:
+            # Ничего не изменено, просто возвращаемся
+            success = True
+        
+        if not success:
+            await callback.answer("❌ Ошибка при обновлении сниппета", show_alert=True)
+            return
+        
+        # Возвращаемся в "Мои сниппеты"
+        snippets = await get_user_snippets_api(user_id)
+        
+        if not snippets:
+            text = "Мои сниппеты:\n\nУ вас нет созданных сниппетов"
+        else:
+            text = "Мои сниппеты:"
+        
+        keyboard = build_my_snippets_keyboard(snippets)
+        await callback.message.edit_text(text, reply_markup=keyboard)
+        await state.set_state(SnippetStates.my_snippets)
+        await callback.answer("✅ Сниппет успешно обновлен!")
+
+
 @router.callback_query(F.data == "snippets_back")
 async def snippets_back_callback(callback: CallbackQuery, state: FSMContext):
     """Обработчик кнопки 'Назад'"""
@@ -578,44 +710,47 @@ async def snippets_exit_callback(callback: CallbackQuery, state: FSMContext):
 @router.message(SnippetStates.create_trigger)
 async def process_trigger_input(message: Message, state: FSMContext):
     """Обработчик ввода триггера"""
+    data = await state.get_data()
+    panel_message_id = data.get('message_id')
+    
+    # Удаляем панель управления
+    if panel_message_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=panel_message_id)
+        except Exception as e:
+            logger.debug(f"Не удалось удалить панель управления: {e}")
+    
     if not message.text:
-        await message.answer("❌ Пожалуйста, отправьте текстовое сообщение с названием сниппета")
+        error_msg = await message.answer("❌ Пожалуйста, отправьте текстовое сообщение с названием сниппета")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        # Отправляем панель заново после сообщения об ошибке
+        text = "Введите название сниппета, например - ммс (будет вызываться через ?ммс)"
+        keyboard = build_cancel_keyboard()
+        panel_message = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(message_id=panel_message.message_id)
         return
     
     trigger = message.text.strip()
     
     # Валидация: одно слово, только буквы (кириллица/латиница), без цифр и символов
     if not re.match(r'^[a-zA-Zа-яА-ЯёЁ]+$', trigger):
-        await message.answer("❌ Триггер должен быть одним словом, состоящим только из букв (без цифр и символов)")
+        error_msg = await message.answer("❌ Триггер должен быть одним словом, состоящим только из букв (без цифр и символов)")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        # Отправляем панель заново после сообщения об ошибке
+        text = "Введите название сниппета, например - ммс (будет вызываться через ?ммс)"
+        keyboard = build_cancel_keyboard()
+        panel_message = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(message_id=panel_message.message_id)
         return
     
-    # Проверка уникальности через API (пока просто сохраняем, проверка будет при создании)
+    # Сохраняем триггер
     await state.update_data(trigger=trigger.lower())
     
-    # Редактируем сообщение
+    # Отправляем панель управления заново после сообщения пользователя
     text = "Введите текст/описание для сниппета, если необходимо прикрепите одно изображение или видео"
     keyboard = build_cancel_keyboard()
-    
-    # Получаем message_id из состояния
-    data = await state.get_data()
-    message_id = data.get('message_id')
-    
-    if message_id:
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=message_id,
-                text=text,
-                reply_markup=keyboard
-            )
-        except Exception as e:
-            logger.error(f"Ошибка редактирования сообщения: {e}")
-            # Если не удалось отредактировать, отправляем новое
-            sent_message = await message.answer(text, reply_markup=keyboard)
-            await state.update_data(message_id=sent_message.message_id)
-    else:
-        sent_message = await message.answer(text, reply_markup=keyboard)
-        await state.update_data(message_id=sent_message.message_id)
+    panel_message = await message.answer(text, reply_markup=keyboard)
+    await state.update_data(message_id=panel_message.message_id)
     
     await state.set_state(SnippetStates.create_message)
 
@@ -625,9 +760,18 @@ async def process_message_input(message: Message, state: FSMContext):
     """Обработчик ввода сообщения и медиа"""
     data = await state.get_data()
     trigger = data.get('trigger')
+    panel_message_id = data.get('message_id')
+    
+    # Удаляем панель управления
+    if panel_message_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=panel_message_id)
+        except Exception as e:
+            logger.debug(f"Не удалось удалить панель управления: {e}")
     
     if not trigger:
-        await message.answer("❌ Ошибка: триггер не найден. Начните заново.")
+        error_msg = await message.answer("❌ Ошибка: триггер не найден. Начните заново.")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
         await state.clear()
         return
     
@@ -645,14 +789,26 @@ async def process_message_input(message: Message, state: FSMContext):
     
     # Валидация: если есть медиа, должно быть только одно
     if message.photo and message.video:
-        await message.answer("❌ Пожалуйста, прикрепите только одно изображение ИЛИ одно видео, не оба")
+        error_msg = await message.answer("❌ Пожалуйста, прикрепите только одно изображение ИЛИ одно видео, не оба")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        # Отправляем панель заново после сообщения об ошибке
+        text = "Введите текст/описание для сниппета, если необходимо прикрепите одно изображение или видео"
+        keyboard = build_cancel_keyboard()
+        panel_message = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(message_id=panel_message.message_id)
         return
     
     # Проверяем наличие текста
     message_text = message.caption if (message.photo or message.video) else message.text
     
     if not message_text or not message_text.strip():
-        await message.answer("❌ Пожалуйста, введите текст для сниппета")
+        error_msg = await message.answer("❌ Пожалуйста, введите текст для сниппета")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        # Отправляем панель заново после сообщения об ошибке
+        text = "Введите текст/описание для сниппета, если необходимо прикрепите одно изображение или видео"
+        keyboard = build_cancel_keyboard()
+        panel_message = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(message_id=panel_message.message_id)
         return
     
     message_text = message_text.strip()
@@ -662,10 +818,16 @@ async def process_message_input(message: Message, state: FSMContext):
     success = await create_snippet_api(user_id, trigger, message_text, media, media_type)
     
     if not success:
-        await message.answer("❌ Ошибка при создании сниппета. Попробуйте еще раз.")
+        error_msg = await message.answer("❌ Ошибка при создании сниппета. Попробуйте еще раз.")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        # Отправляем панель заново после сообщения об ошибке
+        text = "Введите текст/описание для сниппета, если необходимо прикрепите одно изображение или видео"
+        keyboard = build_cancel_keyboard()
+        panel_message = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(message_id=panel_message.message_id)
         return
     
-    # Возвращаемся в "Мои сниппеты"
+    # Возвращаемся в "Мои сниппеты" - отправляем панель заново после сообщения пользователя
     snippets = await get_user_snippets_api(user_id)
     
     if not snippets:
@@ -674,77 +836,69 @@ async def process_message_input(message: Message, state: FSMContext):
         text = "Мои сниппеты:"
     
     keyboard = build_my_snippets_keyboard(snippets)
-    
-    # Редактируем сообщение
-    message_id = data.get('message_id')
-    if message_id:
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=message_id,
-                text=text,
-                reply_markup=keyboard
-            )
-        except Exception as e:
-            logger.error(f"Ошибка редактирования сообщения: {e}")
-            # Если не удалось отредактировать, отправляем новое
-            sent_message = await message.answer(text, reply_markup=keyboard)
-            await state.update_data(message_id=sent_message.message_id)
-    else:
-        sent_message = await message.answer(text, reply_markup=keyboard)
-        await state.update_data(message_id=sent_message.message_id)
+    panel_message = await message.answer(text, reply_markup=keyboard)
+    await state.update_data(message_id=panel_message.message_id)
     
     await state.set_state(SnippetStates.my_snippets)
-    await message.answer("✅ Сниппет успешно создан!")
+    success_msg = await message.answer("✅ Сниппет успешно создан!")
+    asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, success_msg.message_id))
 
 
 @router.message(SnippetStates.edit_trigger)
 async def process_edit_trigger_input(message: Message, state: FSMContext):
     """Обработчик ввода нового триггера при редактировании"""
+    data = await state.get_data()
+    snippet_id = data.get('editing_snippet_id')
+    panel_message_id = data.get('message_id')
+    
+    # Удаляем панель управления
+    if panel_message_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=panel_message_id)
+        except Exception as e:
+            logger.debug(f"Не удалось удалить панель управления: {e}")
+    
+    if not snippet_id:
+        error_msg = await message.answer("❌ Ошибка: ID сниппета не найден. Начните заново.")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        await state.clear()
+        return
+    
     if not message.text:
-        await message.answer("❌ Пожалуйста, отправьте текстовое сообщение с названием сниппета")
+        error_msg = await message.answer("❌ Пожалуйста, отправьте текстовое сообщение с названием сниппета")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        # Отправляем панель заново после сообщения об ошибке
+        snippet = await get_snippet_by_id_api(snippet_id)
+        text = f"Введите новый триггер для сниппета (текущий: {snippet.get('trigger') if snippet else ''})"
+        keyboard = build_skip_keyboard()
+        panel_message = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(message_id=panel_message.message_id)
         return
     
     trigger = message.text.strip()
     
     # Валидация: одно слово, только буквы (кириллица/латиница), без цифр и символов
     if not re.match(r'^[a-zA-Zа-яА-ЯёЁ]+$', trigger):
-        await message.answer("❌ Триггер должен быть одним словом, состоящим только из букв (без цифр и символов)")
-        return
-    
-    data = await state.get_data()
-    snippet_id = data.get('editing_snippet_id')
-    
-    if not snippet_id:
-        await message.answer("❌ Ошибка: ID сниппета не найден. Начните заново.")
-        await state.clear()
+        error_msg = await message.answer("❌ Триггер должен быть одним словом, состоящим только из букв (без цифр и символов)")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        # Отправляем панель заново после сообщения об ошибке
+        snippet = await get_snippet_by_id_api(snippet_id)
+        text = f"Введите новый триггер для сниппета (текущий: {snippet.get('trigger') if snippet else ''})"
+        keyboard = build_skip_keyboard()
+        panel_message = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(message_id=panel_message.message_id)
         return
     
     await state.update_data(editing_trigger=trigger.lower())
     
-    # Редактируем сообщение
-    text = "Введите новый текст/описание для сниппета, если необходимо прикрепите одно изображение или видео"
-    keyboard = build_cancel_keyboard()
+    # Отправляем панель управления заново после сообщения пользователя
+    snippet = await get_snippet_by_id_api(snippet_id)
+    current_message = snippet.get('message', '')[:50] if snippet else ''
+    text = f"Введите новый текст/описание для сниппета (текущий: {current_message}...), если необходимо прикрепите одно изображение или видео"
+    keyboard = build_skip_keyboard()
     
-    # Получаем message_id из состояния
-    message_id = data.get('message_id')
-    
-    if message_id:
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=message_id,
-                text=text,
-                reply_markup=keyboard
-            )
-        except Exception as e:
-            logger.error(f"Ошибка редактирования сообщения: {e}")
-            # Если не удалось отредактировать, отправляем новое
-            sent_message = await message.answer(text, reply_markup=keyboard)
-            await state.update_data(message_id=sent_message.message_id)
-    else:
-        sent_message = await message.answer(text, reply_markup=keyboard)
-        await state.update_data(message_id=sent_message.message_id)
+    panel_message = await message.answer(text, reply_markup=keyboard)
+    await state.update_data(message_id=panel_message.message_id)
     
     await state.set_state(SnippetStates.edit_message)
 
@@ -755,11 +909,26 @@ async def process_edit_message_input(message: Message, state: FSMContext):
     data = await state.get_data()
     snippet_id = data.get('editing_snippet_id')
     trigger = data.get('editing_trigger')
+    panel_message_id = data.get('message_id')
     
-    if not snippet_id or not trigger:
-        await message.answer("❌ Ошибка: данные сниппета не найдены. Начните заново.")
+    # Удаляем панель управления
+    if panel_message_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=panel_message_id)
+        except Exception as e:
+            logger.debug(f"Не удалось удалить панель управления: {e}")
+    
+    if not snippet_id:
+        error_msg = await message.answer("❌ Ошибка: данные сниппета не найдены. Начните заново.")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
         await state.clear()
         return
+    
+    # Если trigger не был обновлен, берем старый
+    if not trigger:
+        snippet = await get_snippet_by_id_api(snippet_id)
+        if snippet:
+            trigger = snippet.get('trigger')
     
     # Проверяем наличие медиа
     media = None
@@ -775,14 +944,30 @@ async def process_edit_message_input(message: Message, state: FSMContext):
     
     # Валидация: если есть медиа, должно быть только одно
     if message.photo and message.video:
-        await message.answer("❌ Пожалуйста, прикрепите только одно изображение ИЛИ одно видео, не оба")
+        error_msg = await message.answer("❌ Пожалуйста, прикрепите только одно изображение ИЛИ одно видео, не оба")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        # Отправляем панель заново после сообщения об ошибке
+        snippet = await get_snippet_by_id_api(snippet_id)
+        current_message = snippet.get('message', '')[:50] if snippet else ''
+        text = f"Введите новый текст/описание для сниппета (текущий: {current_message}...), если необходимо прикрепите одно изображение или видео"
+        keyboard = build_skip_keyboard()
+        panel_message = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(message_id=panel_message.message_id)
         return
     
     # Проверяем наличие текста
     message_text = message.caption if (message.photo or message.video) else message.text
     
     if not message_text or not message_text.strip():
-        await message.answer("❌ Пожалуйста, введите текст для сниппета")
+        error_msg = await message.answer("❌ Пожалуйста, введите текст для сниппета")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        # Отправляем панель заново после сообщения об ошибке
+        snippet = await get_snippet_by_id_api(snippet_id)
+        current_message = snippet.get('message', '')[:50] if snippet else ''
+        text = f"Введите новый текст/описание для сниппета (текущий: {current_message}...), если необходимо прикрепите одно изображение или видео"
+        keyboard = build_skip_keyboard()
+        panel_message = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(message_id=panel_message.message_id)
         return
     
     message_text = message_text.strip()
@@ -792,11 +977,18 @@ async def process_edit_message_input(message: Message, state: FSMContext):
     success = await update_snippet_api(snippet_id, user_id, trigger, message_text, media, media_type)
     
     if not success:
-        await message.answer("❌ Ошибка при обновлении сниппета. Попробуйте еще раз.")
+        error_msg = await message.answer("❌ Ошибка при обновлении сниппета. Попробуйте еще раз.")
+        asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, error_msg.message_id))
+        # Отправляем панель заново после сообщения об ошибке
+        snippet = await get_snippet_by_id_api(snippet_id)
+        current_message = snippet.get('message', '')[:50] if snippet else ''
+        text = f"Введите новый текст/описание для сниппета (текущий: {current_message}...), если необходимо прикрепите одно изображение или видео"
+        keyboard = build_skip_keyboard()
+        panel_message = await message.answer(text, reply_markup=keyboard)
+        await state.update_data(message_id=panel_message.message_id)
         return
     
-    # Возвращаемся в "Мои сниппеты"
-    user_id = message.from_user.id
+    # Возвращаемся в "Мои сниппеты" - отправляем панель заново после сообщения пользователя
     snippets = await get_user_snippets_api(user_id)
     
     if not snippets:
@@ -805,26 +997,10 @@ async def process_edit_message_input(message: Message, state: FSMContext):
         text = "Мои сниппеты:"
     
     keyboard = build_my_snippets_keyboard(snippets)
-    
-    # Редактируем сообщение
-    message_id = data.get('message_id')
-    if message_id:
-        try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=message_id,
-                text=text,
-                reply_markup=keyboard
-            )
-        except Exception as e:
-            logger.error(f"Ошибка редактирования сообщения: {e}")
-            # Если не удалось отредактировать, отправляем новое
-            sent_message = await message.answer(text, reply_markup=keyboard)
-            await state.update_data(message_id=sent_message.message_id)
-    else:
-        sent_message = await message.answer(text, reply_markup=keyboard)
-        await state.update_data(message_id=sent_message.message_id)
+    panel_message = await message.answer(text, reply_markup=keyboard)
+    await state.update_data(message_id=panel_message.message_id)
     
     await state.set_state(SnippetStates.my_snippets)
-    await message.answer("✅ Сниппет успешно обновлен!")
+    success_msg = await message.answer("✅ Сниппет успешно обновлен!")
+    asyncio.create_task(delete_message_after_delay(message.bot, message.chat.id, success_msg.message_id))
 
